@@ -11,8 +11,6 @@ local BotEcho, VerboseLog, BotLog = core.BotEcho, core.VerboseLog, core.BotLog
 
 BotEcho("Loading jungleLib!")
 
-
-
 jungleLib.jungleSpots={
 --Leigon
 {pos=Vector3.Create(7200,3600),  description="L closest to well"      ,difficulty=100 ,stacks=0, creepDifficulty=0},
@@ -45,10 +43,14 @@ jungleLib.creepDifficulty={
 	Neutral_AntloreHealer=5,
 	Neutral_WolfCommander=15,
 }
-
+local checkFrequency=250
+jungleLib.lastCheck=0
 function jungleLib.assess(botBrain)
 	--NEUTRAL SPAWNING
 	local time=HoN.GetMatchTime()
+	if (time<=jungleLib.lastCheck+checkFrequency)then return end --framskip
+	jungleLib.lastCheck=time
+	
 	local mins=-1
 	if time then
 		mins=floor(time/60000)
