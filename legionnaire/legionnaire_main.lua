@@ -254,7 +254,8 @@ local function HarassHeroExecuteOverride(botBrain)
 	if core.CanSeeUnit(botBrain, unitTarget) then
 		local abilTaunt = skills.abilTaunt
 		if abilTaunt:CanActivate() and nLastHarassUtility > botBrain.nTauntThreshold then
-		local nRange = abilTaunt:GetRange()
+			local nRange = abilTaunt:GetRange()
+		end
 	end
 end
 

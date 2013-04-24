@@ -86,7 +86,7 @@ function jungleLib.assess(botBrain)
 				nUnitsNearCamp=nUnitsNearCamp+1
 				core.DrawXPosition(unit:GetPosition(), 'red')
 				creepDifficulty=jungleLib.creepDifficulty[unit:GetTypeName()] --add difficult units
-				if addedDifficulty then jungleLib.jungleSpots[i].creepDifficulty+=creepDifficulty end
+				if addedDifficulty then jungleLib.jungleSpots[i].creepDifficulty=jungleLib.jungleSpots[i].creepDifficulty+creepDifficulty end
 			end
 			
 			if jungleLib.jungleSpots[i].stacks~=0 and nUnitsNearCamp==0 then --we can see the camp, nothing is there.
