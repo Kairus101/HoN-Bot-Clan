@@ -19,7 +19,7 @@ object.bAttackCommands  = true
 object.bAbilityCommands = true
 object.bOtherCommands   = true
 
-object.bReportBehavior = false
+object.bReportBehavior = true
 object.bDebugUtility = false
 object.bDebugExecute = false
 
@@ -230,7 +230,6 @@ core.FindItems = funcFindItemsOverride
 ------Harass behaviour-------
 -----------------------------
 
-
 local function HarassHeroExecuteOverride(botBrain)
 
     local unitTarget = behaviorLib.heroTarget
@@ -259,12 +258,46 @@ local function HarassHeroExecuteOverride(botBrain)
 	end
 end
 
+function zeroUtility(botBrain)
+	return 0
+end
+behaviorLib.PositionSelfBehavior["Utility"] = zeroUtility
+----------------------------------
+--	jungle
+--
+--	Utility: 20 always.  This is effectively an "idle" behavior
+--
+--	Move to unoccupied camps
+----------------------------------
+--@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Jungling BEHAVIOUR
+function jungleUtility(botBrain)
+	return 19
+end
+function jungleExecute(botBrain)
+	unitSelf=core.unitSelf
+	BotEcho("entered")
+	local vMyPos=unitSelf:GetPosition()
+	local vTargetPos=jungleLib.getNearestCampPos(vMyPos,0,50)
+	local dist=Vector3.Distance2DSq(vMyPos, vTargetPos)
+	if (dist>600*600) then --go to next camp
+		return core.OrderMoveToPosAndHoldClamp(botBrain, unitSelf, vTargetPos)
+	else --kill camp
+		return core.OrderAttackPosition(botBrain, unitSelf, vTargetPos,false,false)--attackmove
+	end
+	return true
+end
+behaviorLib.jungleBehavior = {}
+behaviorLib.jungleBehavior["Utility"] = jungleUtility
+behaviorLib.jungleBehavior["Execute"] = jungleExecute
+behaviorLib.jungleBehavior["Name"] = "jungle"
+tinsert(behaviorLib.tBehaviors, behaviorLib.jungleBehavior)
+
 function object:onthinkOverride(tGameVariables) --This is run, even while dead. Every frame.
 	self:onthinkOld(tGameVariables)--don't distrupt old think
 	
 	jungleLib.assess(self)
 	local unitSelf = core.unitSelf
-	local targetPos=jungleLib.getNearestCampPos(unitSelf:GetPosition())
+	local targetPos=jungleLib.getNearestCampPos(unitSelf:GetPosition(),0,50)
 	if targetPos then
 		core.DrawDebugArrow(unitSelf:GetPosition(),targetPos, 'green')
 	end
