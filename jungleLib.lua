@@ -13,19 +13,19 @@ BotEcho("Loading jungleLib!")
 
 jungleLib.jungleSpots={
 --Leigon
-{pos=Vector3.Create(7200,3600),  description="L closest to well"      ,difficulty=100 ,stacks=0, creepDifficulty=0},
-{pos=Vector3.Create(7800,4500),  description="L easy camp"            ,difficulty=30  ,stacks=0, creepDifficulty=0 },
-{pos=Vector3.Create(9800,4200),  description="L mid-jungle hard camp" ,difficulty=100 ,stacks=0, creepDifficulty=0 },
-{pos=Vector3.Create(11100,3100), description="L pullable camp"        ,difficulty=55  ,stacks=0, creepDifficulty=0 },
-{pos=Vector3.Create(11300,4400), description="L camp above pull camp" ,difficulty=55  ,stacks=0, creepDifficulty=0 },
-{pos=Vector3.Create(5100,8000),  description="L ancients"             ,difficulty=250 ,stacks=0, creepDifficulty=0 },
+{pos=Vector3.Create(7200,3600),  description="L closest to well"      ,difficulty=100 ,stacks=0, creepDifficulty=0 ,outsidePos=Vector3.Create(6700,4000)},
+{pos=Vector3.Create(7800,4500),  description="L easy camp"            ,difficulty=30  ,stacks=0, creepDifficulty=0 ,outsidePos=Vector3.Create(7800,5200) },
+{pos=Vector3.Create(9800,4200),  description="L mid-jungle hard camp" ,difficulty=100 ,stacks=0, creepDifficulty=0 ,outsidePos=Vector3.Create(9800,3500) },
+{pos=Vector3.Create(11100,3100), description="L pullable camp"        ,difficulty=55  ,stacks=0, creepDifficulty=0 ,outsidePos=Vector3.Create(11100,2600) },
+{pos=Vector3.Create(11300,4400), description="L camp above pull camp" ,difficulty=55  ,stacks=0, creepDifficulty=0 ,outsidePos=Vector3.Create(11300,3800) },
+{pos=Vector3.Create(5100,8000),  description="L ancients"             ,difficulty=250 ,stacks=0, creepDifficulty=0 ,outsidePos=Vector3.Create(5500,7800) },
 --Hellbourne
-{pos=Vector3.Create(9400,11200), description="H closest to well"      ,difficulty=100 ,stacks=0, creepDifficulty=0 },
-{pos=Vector3.Create(7700,11600), description="H easy camp"            ,difficulty=30  ,stacks=0, creepDifficulty=0 },
-{pos=Vector3.Create(6600,10500), description="H below easy camp"      ,difficulty=55  ,stacks=0, creepDifficulty=0 },
-{pos=Vector3.Create(5100,12500), description="H pullable camp"        ,difficulty=55  ,stacks=0, creepDifficulty=0 },
-{pos=Vector3.Create(4000,11500), description="H far hard camp"        ,difficulty=100 ,stacks=0, creepDifficulty=0 },
-{pos=Vector3.Create(12300,5600), description="H ancients"             ,difficulty=250 ,stacks=0, creepDifficulty=0 }
+{pos=Vector3.Create(9400,11200), description="H closest to well"      ,difficulty=100 ,stacks=0, creepDifficulty=0 ,outsidePos=Vector3.Create(8800,11300) },
+{pos=Vector3.Create(7700,11600), description="H easy camp"            ,difficulty=30  ,stacks=0, creepDifficulty=0 ,outsidePos=Vector3.Create(7500,12000) },
+{pos=Vector3.Create(6600,10500), description="H below easy camp"      ,difficulty=55  ,stacks=0, creepDifficulty=0 ,outsidePos=Vector3.Create(6700,11000) },
+{pos=Vector3.Create(5100,12500), description="H pullable camp"        ,difficulty=55  ,stacks=0, creepDifficulty=0 ,outsidePos=Vector3.Create(5100,13000) },
+{pos=Vector3.Create(4000,11500), description="H far hard camp"        ,difficulty=100 ,stacks=0, creepDifficulty=0 ,outsidePos=Vector3.Create(4400,11700) },
+{pos=Vector3.Create(12300,5600), description="H ancients"             ,difficulty=250 ,stacks=0, creepDifficulty=0 ,outsidePos=Vector3.Create(12300,6400) }
 }
 jungleLib.minutesPassed=-1
 jungleLib.stacking=0
@@ -113,7 +113,7 @@ function jungleLib.getNearestCampPos(pos,minimumDifficulty,maximumDifficulty)
 			nClosestCamp=i
 		end
 	end
-	if (nClosestCamp and jungleLib.jungleSpots[nClosestCamp].stacks>0) then return jungleLib.jungleSpots[nClosestCamp].pos end
+	if (nClosestCamp and jungleLib.jungleSpots[nClosestCamp].stacks>0) then return jungleLib.jungleSpots[nClosestCamp].pos, nClosestCamp end
 	return nil
 end
 
