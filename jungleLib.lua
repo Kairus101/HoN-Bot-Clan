@@ -53,8 +53,7 @@ function jungleLib.assess(botBrain)
 	
 	local mins=-1
 	if time then
-		mins=floor(time/60000)
-		local secs=floor((time-60000*mins)/1000)
+		mins,secs=jungleLib.getTime()
 		if (mins==0 and secs==30) or (mins~=jungleLib.minutesPassed and mins~=0) then --SPAWNING
 			for i=1,#jungleLib.jungleSpots do
 				jungleLib.jungleSpots[i].stacks=1 --assume something spawned. If not, it will be removed later if not.
@@ -114,8 +113,17 @@ function jungleLib.getNearestCampPos(pos,minimumDifficulty,maximumDifficulty)
 			nClosestCamp=i
 		end
 	end
-	if (nClosestCamp) then return jungleLib.jungleSpots[nClosestCamp].pos end
+	if (nClosestCamp and jungleLib.jungleSpots[nClosestCamp].stacks>0) then return jungleLib.jungleSpots[nClosestCamp].pos end
 	return nil
+end
+
+function jungleLib.getTime()
+local time=HoN.GetMatchTime()
+	if time then
+		mins=floor(time/60000)
+		secs=floor((time-60000*mins)/1000)
+	end
+	return mins or -1,secs or -1
 end
 
 function jungleLib.stack(botBrain)

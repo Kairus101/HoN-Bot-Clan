@@ -19,7 +19,7 @@ object.bAttackCommands  = true
 object.bAbilityCommands = true
 object.bOtherCommands   = true
 
-object.bReportBehavior = false
+object.bReportBehavior = true
 object.bDebugUtility = false
 object.bDebugExecute = false
 
@@ -63,7 +63,7 @@ BotEcho('loading legionnaire_main...')
 object.heroName = 'Hero_Legionnaire'
 
 behaviorLib.StartingItems =
-    {"2 Item_IronBuckler", "Item_HealthPotion"}
+    {"2 Item_IronBuckler", "Item_RunesOfTheBlight"}
 behaviorLib.LaneItems =
     {"Item_Lifetube", "Item_Marchers", "Item_EnhancedMarchers"}
 behaviorLib.MidItems =
@@ -121,6 +121,15 @@ function object:SkillBuild()
     for i = nLev, nLev+nLevPts do
         unitSelf:GetAbility( object.tSkills[i] ):LevelUp()
     end
+	if (nLev==3) then
+		jungleLib.currentMaxDifficulty=90
+	elseif (nLev==5) then
+		jungleLib.currentMaxDifficulty=100
+	elseif (nLev==7) then
+		jungleLib.currentMaxDifficulty=130
+	elseif (nLev==10) then
+		jungleLib.currentMaxDifficulty=150
+	end
 end
 
 ------------------------------------
@@ -168,7 +177,7 @@ local function CustomHarassUtilityFnOverride(hero)
     end
 
 	if skills.abilExecution:CanActivate() then
-		nUtil = nUtil + Object.nExecutionUp
+		nUtil = nUtil + object.nExecutionUp
 	end
 
 
@@ -311,27 +320,35 @@ behaviorLib.HarassHeroBehavior["Execute"] = HarassHeroExecuteOverride
 -------------------------------
 -- 		Jungle Behavior		 --
 -------------------------------
-
+behaviorLib.nCreepAggroUtility=0
 function zeroUtility(botBrain)
 	return 0
 end
 behaviorLib.PositionSelfBehavior["Utility"] = zeroUtility
 behaviorLib.PreGameBehavior["Utility"] = zeroUtility
+
 ----------------------------------
 --	jungle
 --
---	Utility: 20 always.  This is effectively an "idle" behavior
+--	Utility: 19 always.  This is effectively an "idle" behavior
 --
 --	Move to unoccupied camps
+--  Attack strongest till they are dead
 ----------------------------------
+
 --@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Jungling BEHAVIOUR
 function jungleUtility(botBrain)
-	return 19
+	return 19--19
 end
+
+jungleLib.currentMaxDifficulty=70
+
+jungleLib.nStacking=0--0=nothing 1=waiting/attacking 2=running away
 function jungleExecute(botBrain)
 	unitSelf=core.unitSelf
+		
 	local vMyPos=unitSelf:GetPosition()
-	local vTargetPos=jungleLib.getNearestCampPos(vMyPos,0,70)
+	local vTargetPos=jungleLib.getNearestCampPos(vMyPos,0,jungleLib.currentMaxDifficulty)
 	if (not vTargetPos) then
 		if (core.myTeam==HoN.GetHellbourneTeam()) then
 			return core.OrderMoveToPosAndHoldClamp(botBrain, unitSelf, Vector3.Create(7600,12800))
@@ -339,16 +356,38 @@ function jungleExecute(botBrain)
 			return core.OrderMoveToPosAndHoldClamp(botBrain, unitSelf, Vector3.Create(7800,5500))
 		end
 	end
+	
+	core.DrawDebugArrow(unitSelf:GetPosition(),vTargetPos, 'green')
+
+	
 	local dist=Vector3.Distance2DSq(vMyPos, vTargetPos)
-	if (dist>600*600) then --go to next camp
-		return core.OrderMoveToPosAndHoldClamp(botBrain, unitSelf, vTargetPos)
+	if (dist>600*600 or jungleLib.nStacking~=0) then --go to next camp
+		--@@@@@@@@@@@@@@@@@@@@@@@@ATTEMPT STACK
+		local mins, secs = jungleLib.getTime()
+		BotEcho(jungleLib.nStacking)
+		if (jungleLib.nStacking~=0 or ((secs>45 or mins==0) and dist<800*800 and dist>600*600)) then --WE ARE STACKING far enough away
+			if (secs<53 and secs>45 and dist<800*800) then
+				jungleLib.nStacking=1
+                return core.OrderHoldClamp(botBrain, unitSelf, false) --this is where the magic happens. Wait for the kill.
+			elseif(jungleLib.nStacking==1 and unitSelf:IsAttackReady()) then--time to attack!
+				return core.OrderAttackPosition(botBrain, unitSelf, vTargetPos,false,false)--attackmove
+			elseif(jungleLib.nStacking~=0 and dist<1500*1500) then--we hit the camp, run!
+				jungleLib.nStacking=2
+				return core.OrderMoveToPosClamp(botBrain, core.unitSelf, core.allyWell and core.allyWell:GetPosition() or behaviorLib.PositionSelfBackUp(), false)
+			else
+				jungleLib.nStacking=0
+				return core.OrderMoveToPosAndHoldClamp(botBrain, unitSelf, vTargetPos)
+			end
+		else
+			return core.OrderMoveToPosAndHoldClamp(botBrain, unitSelf, vTargetPos)
+		end
 	else --kill camp
 		local uUnits=HoN.GetUnitsInRadius(vMyPos, 600, 35) --35 is the lowest working number. I have no clue as to why this is, but it is. Deal with it.
 		if (uUnits~=nil)then
 			--Get all creeps nearby and put them into a single table.
 			local nHighestHealth=0
 			for key, unit in pairs(uUnits) do
-				if (unit:GetHealth()>nHighestHealth)then
+				if (unit:GetHealth()>nHighestHealth and unit:IsAlive())then
 					highestUnit=unit
 					nHighestHealth=unit:GetHealth()
 				end
@@ -381,12 +420,7 @@ tinsert(behaviorLib.tBehaviors, behaviorLib.jungleBehavior)
 function object:onthinkOverride(tGameVariables) --This is run, even while dead. Every frame.
 	self:onthinkOld(tGameVariables)--don't distrupt old think
 	
-	jungleLib.assess(self)
-	local unitSelf = core.unitSelf
-	local targetPos=jungleLib.getNearestCampPos(unitSelf:GetPosition(),0,70)
-	if targetPos then
-		core.DrawDebugArrow(unitSelf:GetPosition(),targetPos, 'green')
-	end
+	jungleLib.assess(self) --assess camps. Know which are empty etc.
 end
 object.onthinkOld = object.onthink
 object.onthink 	= object.onthinkOverride
