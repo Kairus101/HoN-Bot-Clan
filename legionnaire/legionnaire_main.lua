@@ -278,14 +278,14 @@ function jungleExecute(botBrain)
 	unitSelf=core.unitSelf
 	local vMyPos=unitSelf:GetPosition()
 	local vTargetPos=jungleLib.getNearestCampPos(vMyPos,0,70)
-	local dist=Vector3.Distance2DSq(vMyPos, vTargetPos)
 	if (not vTargetPos) then
 		if (core.myTeam==HoN.GetHellbourneTeam()) then
-			return core.OrderMoveToPosAndHoldClamp(botBrain, unitSelf, Vector3.Create(7600,12300))
+			return core.OrderMoveToPosAndHoldClamp(botBrain, unitSelf, Vector3.Create(7600,12800))
 		else
-			return core.OrderMoveToPosAndHoldClamp(botBrain, unitSelf, Vector3.Create(7800,5200))
+			return core.OrderMoveToPosAndHoldClamp(botBrain, unitSelf, Vector3.Create(7800,5500))
 		end
 	end
+	local dist=Vector3.Distance2DSq(vMyPos, vTargetPos)
 	if (dist>600*600) then --go to next camp
 		return core.OrderMoveToPosAndHoldClamp(botBrain, unitSelf, vTargetPos)
 	else --kill camp
@@ -300,11 +300,13 @@ function jungleExecute(botBrain)
 				end
 			end
 			if (highestUnit and highestUnit:GetPosition()) then
-				BotEcho("Attacking")
-				if (core.IsUnitInRange(unitSelf, highestUnit, unitSelf:GetAttackRange())) then
+				local dist=Vector3.Distance2DSq(vMyPos, highestUnit:GetPosition())
+				BotEcho("Attacking "..highestUnit:GetTypeName().." "..dist.."")
+				if (dist<16384*2) then
 					return core.OrderAttackClamp(botBrain, unitSelf, highestUnit,false)
-				else
-					return core.OrderMoveToUnitClamp(botBrain, unitSelf, highestUnit, false)
+				--else
+				--	BotEcho("Moving")
+				--	return core.OrderMoveToUnitClamp(botBrain, unitSelf, highestUnit, false)
 				end
 			else
 				BotEcho("Attack-Moving")

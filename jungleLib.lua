@@ -115,6 +115,7 @@ function jungleLib.getNearestCampPos(pos,minimumDifficulty,maximumDifficulty)
 		end
 	end
 	if (nClosestCamp) then return jungleLib.jungleSpots[nClosestCamp].pos end
+	return nil
 end
 
 function jungleLib.stack(botBrain)
