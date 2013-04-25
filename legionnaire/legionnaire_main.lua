@@ -1,6 +1,6 @@
 -------------------------------------------------------------
------------            LEGO BOT  	             ------------
------------ 	 Yay for Group Projects		    -------------
+-----------            LEGO BOT                 -------------
+----------- 	 Hurrah for Group Projects		-------------
 -------------------------------------------------------------
 
 local _G = getfenv(0)
@@ -19,7 +19,7 @@ object.bAttackCommands  = true
 object.bAbilityCommands = true
 object.bOtherCommands   = true
 
-object.bReportBehavior = true
+object.bReportBehavior = false
 object.bDebugUtility = false
 object.bDebugExecute = false
 
@@ -230,6 +230,7 @@ core.FindItems = funcFindItemsOverride
 ------Harass behaviour-------
 -----------------------------
 
+
 local function HarassHeroExecuteOverride(botBrain)
 
     local unitTarget = behaviorLib.heroTarget
@@ -249,14 +250,67 @@ local function HarassHeroExecuteOverride(botBrain)
 
 	local nLastHarassUtility = behaviorLib.lastHarassUtil
 
-	--Taunt
-	if core.CanSeeUnit(botBrain, unitTarget) then
-		local abilTaunt = skills.abilTaunt
-		if abilTaunt:CanActivate() and nLastHarassUtility > botBrain.nTauntThreshold then
-			local nRange = abilTaunt:GetRange()
+	--portalkey
+	if not bActionTaken then
+		local itemPortalKey = core.itemPortalKey
+		if itemPortalKey then
+			local nPortalKeyRange = itemPortalKey:GetRange()
+			local nRangeLavaSurge = skills.abilLavaSurge:GetRange()
+			if itemPortalKey:CanActivate() and behaviorLib.lastHarassUtil > object.nPortalKeyThreshold then
+				if nTargetDistanceSq > (nRangeTaunt * nRangeTaunt) and nTargetDistanceSq < (nPortalKeyRange*nPortalKeyRange + nRangeTaunt*nRangeTaunt) then
+					if bDebugEchos then BotEcho("PortKey!") end
+					vecCenter = core.GetGroupCenter(core.localUnits["EnemyHeroes"])
+					if vecCenter then
+						bActionTaken = core.OrderItemPosition(botBrain, unitSelf, itemPortalKey, vecCenter)
+					end
+				end
+			end
 		end
 	end
+
+
+	if core.CanSeeUnit(botBrain, unitTarget) then
+
+
+		--Taunt
+		local abilTaunt = skills.abilTaunt
+		local itemExcruciator = core.itemExcruciator
+		if not bActionTaken and abilTaunt:CanActivate() and nLastHarassUtility > botBrain.nTauntThreshold then
+			local nRange = abilTaunt:GetRange()
+			bActionTaken = core.OrderAbility(botBrain, abilTaunt, itemExcruciator, nLastHarassUtility)
+		end
+
+		--Charge
+		local abilChar = skills.abilCharge
+		if not bActionTaken and abilCharge:CanActivate() and nLastHarassUtility > botBrain.nChargeThreshold then
+			local nRange = abilCharge:GetRange()
+			bActionTaken = core.OrderAbilityEntity(botBrain, abilCharge, unitTarget)
+		end
+
+
+		--Execution
+		local abilExecution = skills.abilExecution
+		if not bActionTaken and abilExecution:CanActivate() and nLastHarassUtility > botBrain.nExecutionThreshold and unitTarget:CurrentHealthPercentage() < .25 then
+			local nRange = abilExecution:GetRange()
+			bActionTaken = core.OrderAbilityEntity(botBrain, abilExecution, unitTarget)
+		end
+	end
+
+	if not bActionTaken then
+        return object.harassExecuteOld(botBrain)
+    end
+
+    return bActionTaken
 end
+
+object.harassExecuteOld = behaviorLib.HarassHeroBehavior["Execute"]
+behaviorLib.HarassHeroBehavior["Execute"] = HarassHeroExecuteOverride
+
+
+
+-------------------------------
+-- 		Jungle Behavior		 --
+-------------------------------
 
 function zeroUtility(botBrain)
 	return 0
@@ -336,3 +390,21 @@ function object:onthinkOverride(tGameVariables) --This is run, even while dead. 
 end
 object.onthinkOld = object.onthink
 object.onthink 	= object.onthinkOverride
+
+---------------------------------------
+---			Personality				---
+---------------------------------------
+
+core.tKillChatKeys={
+    "BUAHAHAHA!",
+    "Off with their heads!",
+    "I put the meaning into human blender.",
+    "You spin me right round!"
+}
+core.tDeathChatKeys = {
+    "Spinning out of control..",
+    "I think I'm gonna throw up...",
+    "Off with.....my head?"
+}
+
+BotEcho(object:GetName()..' finished loading legionnaire_main')
