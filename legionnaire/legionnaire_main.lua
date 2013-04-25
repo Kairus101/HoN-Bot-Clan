@@ -129,6 +129,8 @@ function object:SkillBuild()
 		jungleLib.currentMaxDifficulty=130
 	elseif (nLev==10) then
 		jungleLib.currentMaxDifficulty=150
+	elseif (nLev>=12) then
+		jungleLib.currentMaxDifficulty=260
 	end
 end
 
@@ -366,7 +368,7 @@ function jungleExecute(botBrain)
 		local mins, secs = jungleLib.getTime()
 		BotEcho(jungleLib.nStacking)
 		if (jungleLib.nStacking~=0 or ((secs>45 or mins==0) and dist<800*800 and dist>600*600)) then --WE ARE STACKING far enough away
-			if (secs<53 and secs>45 and dist<800*800) then
+			if (secs<53 and (secs>45 or mins==0) and dist<800*800) then
 				jungleLib.nStacking=1
                 return core.OrderHoldClamp(botBrain, unitSelf, false) --this is where the magic happens. Wait for the kill.
 			elseif(jungleLib.nStacking==1 and unitSelf:IsAttackReady()) then--time to attack!
@@ -386,6 +388,7 @@ function jungleExecute(botBrain)
 		if (uUnits~=nil)then
 			--Get all creeps nearby and put them into a single table.
 			local nHighestHealth=0
+			local highestUnit=nil
 			for key, unit in pairs(uUnits) do
 				if (unit:GetHealth()>nHighestHealth and unit:IsAlive())then
 					highestUnit=unit
