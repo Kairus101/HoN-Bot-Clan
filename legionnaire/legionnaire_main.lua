@@ -65,9 +65,9 @@ object.heroName = 'Hero_Legionnaire'
 behaviorLib.StartingItems =
     {"2 Item_IronBuckler", "Item_RunesOfTheBlight"}
 behaviorLib.LaneItems =
-    {"Item_Lifetube", "Item_Marchers", "Item_EnhancedMarchers"}
+    {"Item_Lifetube", "Item_Marchers", "Item_Shield2", "Item_EnhancedMarchers"}
 behaviorLib.MidItems =
-    {"Item_Shield2", "Item_BloodChalice", "Item_PortalKey"} --Shield2 is HotBL
+    {"Item_EnhancedMarchers", "Item_BloodChalice", "Item_PortalKey"} --Shield2 is HotBL
 behaviorLib.LateItems =
     {"Item_Excruciator", "Item_SolsBulwark", "Item_DaemonicBreastplate"} --Excruciator is Barbed Armor
 
@@ -314,8 +314,8 @@ local function HarassHeroExecuteOverride(botBrain)
     return bActionTaken
 end
 
-object.harassExecuteOld = behaviorLib.HarassHeroBehavior["Execute"]
-behaviorLib.HarassHeroBehavior["Execute"] = HarassHeroExecuteOverride
+--object.harassExecuteOld = behaviorLib.HarassHeroBehavior["Execute"]
+--behaviorLib.HarassHeroBehavior["Execute"] = HarassHeroExecuteOverride
 
 
 
@@ -323,6 +323,7 @@ behaviorLib.HarassHeroBehavior["Execute"] = HarassHeroExecuteOverride
 -- 		Jungle Behavior		 --
 -------------------------------
 behaviorLib.nCreepAggroUtility=0
+behaviorLib.nRecentDamageMul=0.20--0.35
 function zeroUtility(botBrain)
 	return 0
 end
@@ -340,7 +341,7 @@ behaviorLib.PreGameBehavior["Utility"] = zeroUtility
 
 --@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Jungling BEHAVIOUR
 function jungleUtility(botBrain)
-	return 19--19
+	return 21--19
 end
 
 jungleLib.currentMaxDifficulty=70
@@ -350,12 +351,12 @@ function jungleExecute(botBrain)
 	unitSelf=core.unitSelf
 		
 	local vMyPos=unitSelf:GetPosition()
-	local vTargetPos=jungleLib.getNearestCampPos(vMyPos,0,jungleLib.currentMaxDifficulty)
+	local vTargetPos, camp=jungleLib.getNearestCampPos(vMyPos,0,jungleLib.currentMaxDifficulty)
 	if (not vTargetPos) then
 		if (core.myTeam==HoN.GetHellbourneTeam()) then
-			return core.OrderMoveToPosAndHoldClamp(botBrain, unitSelf, Vector3.Create(7600,12800))
+			return core.OrderMoveToPosAndHoldClamp(botBrain, unitSelf, jungleLib.jungleSpots[8].outsidePos)
 		else
-			return core.OrderMoveToPosAndHoldClamp(botBrain, unitSelf, Vector3.Create(7800,5500))
+			return core.OrderMoveToPosAndHoldClamp(botBrain, unitSelf, jungleLib.jungleSpots[2].outsidePos)
 		end
 	end
 	
@@ -366,16 +367,25 @@ function jungleExecute(botBrain)
 	if (dist>600*600 or jungleLib.nStacking~=0) then --go to next camp
 		--@@@@@@@@@@@@@@@@@@@@@@@@ATTEMPT STACK
 		local mins, secs = jungleLib.getTime()
-		BotEcho(jungleLib.nStacking)
-		if (jungleLib.nStacking~=0 or ((secs>45 or mins==0) and dist<800*800 and dist>600*600)) then --WE ARE STACKING far enough away
-			if (secs<53 and (secs>45 or mins==0) and dist<800*800) then
+		BotEcho("Stacking status: "..jungleLib.nStacking)
+		if (jungleLib.nStacking~=0 or ((secs>40 or mins==0) and dist<800*800 and dist>400*400)) then --WE ARE STACKING far enough away
+			if (secs<53 and (secs>40 or mins==0)) then
 				jungleLib.nStacking=1
-                return core.OrderHoldClamp(botBrain, unitSelf, false) --this is where the magic happens. Wait for the kill.
+				BotEcho(camp)
+                --return core.OrderHoldClamp(botBrain, unitSelf, false)
+				return core.OrderMoveToPosAndHoldClamp(botBrain, core.unitSelf, jungleLib.jungleSpots[camp].outsidePos, false)
 			elseif(jungleLib.nStacking==1 and unitSelf:IsAttackReady()) then--time to attack!
+				if (secs>=57) then jungleLib.nStacking=0 end
 				return core.OrderAttackPosition(botBrain, unitSelf, vTargetPos,false,false)--attackmove
-			elseif(jungleLib.nStacking~=0 and dist<1500*1500) then--we hit the camp, run!
+			elseif(jungleLib.nStacking~=0 and dist<1500*1500 and secs>50) then--we hit the camp, run!
 				jungleLib.nStacking=2
-				return core.OrderMoveToPosClamp(botBrain, core.unitSelf, core.allyWell and core.allyWell:GetPosition() or behaviorLib.PositionSelfBackUp(), false)
+				local awayPos=jungleLib.jungleSpots[camp].pos+(jungleLib.jungleSpots[camp].outsidePos-jungleLib.jungleSpots[camp].pos)*5
+				
+				core.DrawXPosition(jungleLib.jungleSpots[camp].pos, 'red')
+				core.DrawXPosition(jungleLib.jungleSpots[camp].outsidePos, 'red')
+				core.DrawDebugArrow(jungleLib.jungleSpots[camp].pos,awayPos, 'green')
+				
+				return core.OrderMoveToPosClamp(botBrain, core.unitSelf, awayPos, false)
 			else
 				jungleLib.nStacking=0
 				return core.OrderMoveToPosAndHoldClamp(botBrain, unitSelf, vTargetPos)
@@ -397,15 +407,10 @@ function jungleExecute(botBrain)
 			end
 			if (highestUnit and highestUnit:GetPosition()) then
 				local dist=Vector3.Distance2DSq(vMyPos, highestUnit:GetPosition())
-				BotEcho("Attacking "..highestUnit:GetTypeName().." "..dist.."")
 				if (dist<16384*2) then
 					return core.OrderAttackClamp(botBrain, unitSelf, highestUnit,false)
-				--else
-				--	BotEcho("Moving")
-				--	return core.OrderMoveToUnitClamp(botBrain, unitSelf, highestUnit, false)
 				end
 			else
-				BotEcho("Attack-Moving")
 				return core.OrderAttackPosition(botBrain, unitSelf, vTargetPos,false,false)--attackmove
 			end
 		else
