@@ -262,6 +262,7 @@ function zeroUtility(botBrain)
 	return 0
 end
 behaviorLib.PositionSelfBehavior["Utility"] = zeroUtility
+behaviorLib.PreGameBehavior["Utility"] = zeroUtility
 ----------------------------------
 --	jungle
 --
@@ -275,14 +276,43 @@ function jungleUtility(botBrain)
 end
 function jungleExecute(botBrain)
 	unitSelf=core.unitSelf
-	BotEcho("entered")
 	local vMyPos=unitSelf:GetPosition()
-	local vTargetPos=jungleLib.getNearestCampPos(vMyPos,0,50)
+	local vTargetPos=jungleLib.getNearestCampPos(vMyPos,0,70)
 	local dist=Vector3.Distance2DSq(vMyPos, vTargetPos)
+	if (not vTargetPos) then
+		if (core.myTeam==HoN.GetHellbourneTeam()) then
+			return core.OrderMoveToPosAndHoldClamp(botBrain, unitSelf, Vector3.Create(7600,12300))
+		else
+			return core.OrderMoveToPosAndHoldClamp(botBrain, unitSelf, Vector3.Create(7800,5200))
+		end
+	end
 	if (dist>600*600) then --go to next camp
 		return core.OrderMoveToPosAndHoldClamp(botBrain, unitSelf, vTargetPos)
 	else --kill camp
-		return core.OrderAttackPosition(botBrain, unitSelf, vTargetPos,false,false)--attackmove
+		local uUnits=HoN.GetUnitsInRadius(vMyPos, 600, 35) --35 is the lowest working number. I have no clue as to why this is, but it is. Deal with it.
+		if (uUnits~=nil)then
+			--Get all creeps nearby and put them into a single table.
+			local nHighestHealth=0
+			for key, unit in pairs(uUnits) do
+				if (unit:GetHealth()>nHighestHealth)then
+					highestUnit=unit
+					nHighestHealth=unit:GetHealth()
+				end
+			end
+			if (highestUnit and highestUnit:GetPosition()) then
+				BotEcho("Attacking")
+				if (core.IsUnitInRange(unitSelf, highestUnit, unitSelf:GetAttackRange())) then
+					return core.OrderAttackClamp(botBrain, unitSelf, highestUnit,false)
+				else
+					return core.OrderMoveToUnitClamp(botBrain, unitSelf, highestUnit, false)
+				end
+			else
+				BotEcho("Attack-Moving")
+				return core.OrderAttackPosition(botBrain, unitSelf, vTargetPos,false,false)--attackmove
+			end
+		else
+			return core.OrderAttackPosition(botBrain, unitSelf, vTargetPos,false,false)--attackmove
+		end
 	end
 	return true
 end
@@ -297,7 +327,7 @@ function object:onthinkOverride(tGameVariables) --This is run, even while dead. 
 	
 	jungleLib.assess(self)
 	local unitSelf = core.unitSelf
-	local targetPos=jungleLib.getNearestCampPos(unitSelf:GetPosition(),0,50)
+	local targetPos=jungleLib.getNearestCampPos(unitSelf:GetPosition(),0,70)
 	if targetPos then
 		core.DrawDebugArrow(unitSelf:GetPosition(),targetPos, 'green')
 	end
