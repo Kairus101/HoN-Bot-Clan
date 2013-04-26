@@ -1,25 +1,37 @@
--------------------------------------------------------------
------------            LEGO BOT                 -------------
------------ 	 Hurrah for Group Projects		-------------
--------------------------------------------------------------
+----------------------------------------------
+--  _                     ______       _    --
+-- | |                    | ___ \     | |   --
+-- | |     ___  __ _  ___ | |_/ / ___ | |_  --
+-- | |    / _ \/ _` |/ _ \| ___ \/ _ \| __| --
+-- | |___|  __/ (_| | (_) | |_/ / (_) | |_  --
+-- \_____/\___|\__, |\___/\____/ \___/ \__| --
+--              __/ |                       --
+--             |___/                        --
+----------------------------------------------
+--       A HoN Community Bot Project        --
+----------------------------------------------
+
+------------------------------------------
+--          Bot Initialization          --
+------------------------------------------
 
 local _G = getfenv(0)
 local object = _G.object
 
 object.myName = object:GetName()
 
-object.bRunLogic        = true
-object.bRunBehaviors    = true
-object.bUpdates         = true
-object.bUseShop         = true
+object.bRunLogic = true
+object.bRunBehaviors = true
+object.bUpdates = true
+object.bUseShop = true
 
-object.bRunCommands     = true
-object.bMoveCommands    = true
-object.bAttackCommands  = true
+object.bRunCommands = true
+object.bMoveCommands = true
+object.bAttackCommands = true
 object.bAbilityCommands = true
-object.bOtherCommands   = true
+object.bOtherCommands = true
 
-object.bReportBehavior = true
+object.bReportBehavior = false
 object.bDebugUtility = false
 object.bDebugExecute = false
 
@@ -27,11 +39,11 @@ object.logger = {}
 object.logger.bWriteLog = false
 object.logger.bVerboseLog = false
 
-object.core         = {}
-object.eventsLib    = {}
-object.metadata     = {}
-object.behaviorLib  = {}
-object.skills       = {}
+object.core = {}
+object.eventsLib = {}
+object.metadata = {}
+object.behaviorLib = {}
+object.skills = {}
 
 runfile "bots/core.lua"
 runfile "bots/botbraincore.lua"
@@ -60,22 +72,24 @@ local sqrtTwo = math.sqrt(2)
 
 BotEcho('loading legionnaire_main...')
 
---------------------------------
------Constant Definitions-------
---------------------------------
+---------------------------------
+--          Constants          --
+---------------------------------
 
+-- Legionnaire
 object.heroName = 'Hero_Legionnaire'
 
+-- Item buy order. internal names
 behaviorLib.StartingItems =
     {"2 Item_IronBuckler", "Item_RunesOfTheBlight"}
 behaviorLib.LaneItems =
-    {"Item_Lifetube", "Item_Marchers", "Item_Shield2", "Item_EnhancedMarchers"}
+    {"Item_Lifetube", "Item_Marchers", "Item_Shield2", "Item_EnhancedMarchers"} -- Shield2 is HotBL
 behaviorLib.MidItems =
-    {"Item_EnhancedMarchers", "Item_BloodChalice", "Item_PortalKey"} --Shield2 is HotBL
+    {"Item_EnhancedMarchers", "Item_BloodChalice", "Item_PortalKey"} 
 behaviorLib.LateItems =
     {"Item_Excruciator", "Item_SolsBulwark", "Item_DaemonicBreastplate"} --Excruciator is Barbed Armor
 
-	-- 0 is Taunt, 1 is Charge, 2 is Whirling Blade, 3 is Execution, 4 is Attributes
+-- Skillbuild. 0 is Taunt, 1 is Charge, 2 is Whirling Blade, 3 is Execution, 4 is Attributes
 object.tSkills = {
     2, 1, 2, 0, 2,
     3, 2, 1, 1, 1,
@@ -84,132 +98,92 @@ object.tSkills = {
     4, 4, 4, 4, 4
 }
 
+-- Bonus agression points if a skill/item is available for use
+
 object.nTauntUp = 7
 object.nChargeUp = 5
-object.nExecutionUp = 13
+object.nDecapUp = 13
+object.nPortalKeyUp = 0
+object.nBarbedArmorUp = 0
+
+-- Bonus agression points that are applied to the bot upon successfully using a skill/item
 
 object.nTauntUse = 13
 object.nChargeUse = 12
-object.nExecutionUse = 18
+object.nDecapUse = 18
 object.nPortalKeyUse = 20
-object.nExcruciatorUse = 18
+object.nBarbedArmorUse = 18
 
+-- Thresholds of aggression the bot must reach to use these abilities
 
 object.nTauntThreshold = 26
 object.nChargeThreshold = 36
-object.nExecutionThreshold = 38
+object.nDecapThreshold = 38
 object.nPortalKeyThreshold = 20
+
+-- Other variables
+
+behaviorLib.nCreepPushbackMul = 0.5
+behaviorLib.nTargetPositioningMul = 0.6
 
 object.nLastTauntTime = 0
 
-----------------------------------
-------Bot Function Overrides------
-----------------------------------
+------------------------------
+--          Skills          --
+------------------------------
 
 function object:SkillBuild()
-    core.VerboseLog("SkillBuild()")
+	core.VerboseLog("SkillBuild()")
 
-    local unitSelf = self.core.unitSelf
-    if  skills.abilWhirlingBlade == nil then
-        skills.abilTaunt = unitSelf:GetAbility(0)
-        skills.abilCharge = unitSelf:GetAbility(1)
-        skills.abilWhirlingBlade = unitSelf:GetAbility(2)
-        skills.abilExecution = unitSelf:GetAbility(3)
-        skills.abilAttributeBoost = unitSelf:GetAbility(4)
-    end
-    if unitSelf:GetAbilityPointsAvailable() <= 0 then
-        return
-    end
+	local unitSelf = self.core.unitSelf
+	if  skills.abilWhirlingBlade == nil then
+		skills.abilTaunt = unitSelf:GetAbility(0)
+		skills.abilCharge = unitSelf:GetAbility(1)
+		skills.abilWhirlingBlade = unitSelf:GetAbility(2)
+		skills.abilDecap = unitSelf:GetAbility(3)
+		skills.abilAttributeBoost = unitSelf:GetAbility(4)
+	end
 
+	local nPoints = unitSelf:GetAbilityPointsAvailable()
+	if nPoints <= 0 then
+		return
+	end
 
-    local nLev = unitSelf:GetLevel()
-    local nLevPts = unitSelf:GetAbilityPointsAvailable()
-    for i = nLev, nLev+nLevPts do
-        unitSelf:GetAbility( object.tSkills[i] ):LevelUp()
-    end
-	if (nLev==3) then
-		jungleLib.currentMaxDifficulty=90
-	elseif (nLev==5) then
-		jungleLib.currentMaxDifficulty=100
-	elseif (nLev==7) then
-		jungleLib.currentMaxDifficulty=130
-	elseif (nLev==10) then
-		jungleLib.currentMaxDifficulty=150
-	elseif (nLev>=12) then
-		jungleLib.currentMaxDifficulty=260
+	local nLevel = unitSelf:GetLevel()
+	for i = nLevel, (nLevel + nPoints) do
+		unitSelf:GetAbility( self.tSkills[i] ):LevelUp()
+	end
+
+	if nLevel == 3 then
+		jungleLib.currentMaxDifficulty = 90
+	elseif nLevel == 5 then
+		jungleLib.currentMaxDifficulty = 100
+	elseif nLevel == 7 then
+		jungleLib.currentMaxDifficulty = 130
+	elseif nLevel == 10 then
+		jungleLib.currentMaxDifficulty = 150
+	elseif nLevel >= 12 then
+		jungleLib.currentMaxDifficulty = 260
 	end
 end
 
-------------------------------------
-------OncombatEvent Override--------
-------------------------------------
-
-function object:oncombateventOverride(EventData)
-    self:oncombateventOld(EventData)
-
-    local nAddBonus = 0
-
-    if EventData.Type == "Ability" then
-        if EventData.InflictorName == "Ability_Legionnaire1" then
-            nAddBonus = nAddBonus + object.nTauntUse
-        elseif EventData.InflictorName == "Ability_Legionnaire2" then
-            nAddBonus = nAddBonus + object.nChargeUse
-		elseif EventData.InflictorName == "Ability_Legionnaire4" then
-			nAddBonus = nAddBonus + object.nExecutionUse
-        end
-    end
-
-   if nAddBonus > 0 then
-        core.DecayBonus(self)
-        core.nHarassBonus = core.nHarassBonus + nAddBonus
-    end
-
-end
-object.oncombateventOld = object.oncombatevent
-object.oncombatevent    = object.oncombateventOverride
-
------------------------------------------
-------CustomHarassUtility Override-------
------------------------------------------
-
-
-local function CustomHarassUtilityFnOverride(hero)
-    local nUtil = 0
-
-    if skills.abilTaunt:CanActivate() then
-        nUtil = nUtil + object.nTauntUp
-    end
-
-    if skills.abilCharge:CanActivate() then
-        nUtil = nUtil + object.nChargeUp
-    end
-
-	if skills.abilExecution:CanActivate() then
-		nUtil = nUtil + object.nExecutionUp
-	end
-
-
-    return nUtil
-end
-behaviorLib.CustomHarassUtility = CustomHarassUtilityFnOverride
-
--------------------------------
-------FindItems Override-------
--------------------------------
+------------------------------------------
+--          FindItems Override          --
+------------------------------------------
 
 local function funcFindItemsOverride(botBrain)
-    local bUpdated = object.FindItemsOld(botBrain)
+	local bUpdated = object.FindItemsOld(botBrain)
 
-    if core.itemPortalKey ~= nil and not core.itemPortalKey:IsValid() then
-        core.itemPortalKey = nil
-    end
-
-	if core.itemEnhancedMarchers ~= nil and not core.itemEnhancedMarchers:IsValid() then
-		core.itemEnhancedMarchers = nil
+	if core.itemPortalKey ~= nil and not core.itemPortalKey:IsValid() then
+		core.itemPortalKey = nil
 	end
 
-	if core.itemExcruciator ~= nil and not core.itemExcruciator:IsValid() then
-		core.itemExcruciator = nil
+	if core.itemGhostMarchers ~= nil and not core.itemGhostMarchers:IsValid() then
+		core.itemGhostMarchers = nil
+	end
+
+	if core.itemBarbedArmor ~= nil and not core.itemBarbedArmor:IsValid() then
+		core.itemBarbedArmor = nil
 	end
 
 	if core.itemBloodChalice ~=nil and not core.itemBloodChalice:IsValid() then
@@ -217,30 +191,96 @@ local function funcFindItemsOverride(botBrain)
 	end
 
 	if bUpdated then
-        if core.itemPortalKey and core.itemEnhancedMarchers and core.itemExcruciator and core.itemBloodChalice then
-            return
-        end
+		if core.itemPortalKey and core.itemGhostMarchers and core.itemBarbedArmor and core.itemBloodChalice then
+			return
+		end
 
-
-        local inventory = core.unitSelf:GetInventory(true)
-        for slot = 1, 12, 1 do
-            local curItem = inventory[slot]
-            if curItem then
-                if core.itemPortalKey == nil and curItem:GetName() == "Item_PortalKey" then
-                    core.itemPortalKey = core.WrapInTable(curItem)
-                elseif core.itemEnhancedMarchers == nil and curItem:GetName() == "Item_EnhancedMarchers" then
-                    core.itemEnhancedMarchers = core.WrapInTable(curItem)
-                elseif core.itemExcruciator == nil and curItem:GetName() == "Item_Excruciator" then
-                    core.itemExcruciator = core.WrapInTable(curItem)
-                elseif core.itemBloodChalice == nil and curItem:GetName() == "Item_BloodChalice" then
-                    core.itemBloodChalice = core.WrapInTable(curItem)
-                end
-            end
-        end
-    end
+		local inventory = core.unitSelf:GetInventory(true)
+		for slot = 1, 12, 1 do
+			local curItem = inventory[slot]
+			if curItem then
+				if core.itemPortalKey == nil and curItem:GetName() == "Item_PortalKey" then
+					core.itemPortalKey = core.WrapInTable(curItem)
+				elseif core.itemGhostMarchers == nil and curItem:GetName() == "Item_EnhancedMarchers" then
+					core.itemGhostMarchers = core.WrapInTable(curItem)
+				elseif core.itemBarbedArmor == nil and curItem:GetName() == "Item_Excruciator" then
+					core.itemBarbedArmor = core.WrapInTable(curItem)
+				elseif core.itemBloodChalice == nil and curItem:GetName() == "Item_BloodChalice" then
+					core.itemBloodChalice = core.WrapInTable(curItem)
+				end
+			end
+		end
+	end
 end
+
 object.FindItemsOld = core.FindItems
 core.FindItems = funcFindItemsOverride
+
+----------------------------------------------
+--          OnCombatEvent Override          --
+----------------------------------------------
+
+function object:oncombateventOverride(EventData)
+	self:oncombateventOld(EventData)
+
+	local nAddBonus = 0
+
+	if EventData.Type == "Ability" then
+		if EventData.InflictorName == "Ability_Legionnaire1" then
+			nAddBonus = nAddBonus + object.nTauntUse
+		elseif EventData.InflictorName == "Ability_Legionnaire2" then
+			nAddBonus = nAddBonus + object.nChargeUse
+		elseif EventData.InflictorName == "Ability_Legionnaire4" then
+			nAddBonus = nAddBonus + object.nDecapUse
+		end
+	elseif EventData.Type == "Item" then
+		if core.itemPortalKey ~= nil and EventData.SourceUnit == core.unitSelf:GetUniqueID() and EventData.InflictorName == core.itemPortalKey:GetName() then
+			nAddBonus = nAddBonus + self.nPortalKeyUse
+		elseif core.itemBarbedArmor ~= nil and EventData.SourceUnit == core.unitSelf:GetUniqueID() and EventData.InflictorName == core.itemBarbedArmor:GetName() then
+			nAddBonus = nAddBonus + self.nBarbedArmorUse
+		end
+	end
+
+	if nAddBonus > 0 then
+		core.DecayBonus(self)
+		core.nHarassBonus = core.nHarassBonus + nAddBonus
+	end
+end
+
+object.oncombateventOld = object.oncombatevent
+object.oncombatevent    = object.oncombateventOverride
+
+----------------------------------------------------
+--          CustomHarassUtility Override          --
+----------------------------------------------------
+
+local function CustomHarassUtilityFnOverride(hero)
+    local nUtility = 0
+
+    if skills.abilTaunt:CanActivate() then
+        nUtility = nUtility + object.nTauntUp
+    end
+
+    if skills.abilCharge:CanActivate() then
+        nUtility = nUtility + object.nChargeUp
+    end
+
+	if skills.abilDecap:CanActivate() then
+		nUtility = nUtility + object.nDecapUp
+	end
+	
+	if object.itemPortalKey and object.itemPortalKey:CanActivate() then
+		nUtility = nUtility + object.nPortalKeyUp
+	end
+
+	if object.itemBarbedArmor and object.itemBarbedArmor:CanActivate() then
+		nUtility = nUtility + object.nBarbedArmorUp
+	end
+
+    return nUtility
+end
+
+behaviorLib.CustomHarassUtility = CustomHarassUtilityFnOverride
 
 ----------------------------------------
 --          Portal Key Logic          --
@@ -252,7 +292,7 @@ local function getBestPortalKeyTauntPosition(botBrain, vecMyPosition, nMinimumTa
 	if nMinimumTargets == nil then
 		nMinimumTargets = 1
 	end
-	
+
 	local tEnemyHeroes = core.localUnits["EnemyHeroes"]
 	if tEnemyHeroes and core.NumberElements(tEnemyHeroes) >= nMinimumTargets then
 		local nTauntRadius = 300
@@ -273,10 +313,10 @@ local function getBestPortalKeyTauntPosition(botBrain, vecMyPosition, nMinimumTa
 				tBestGroup = tCurrentGroup
 				nBestGroupCount = nCurrentGroupCount
 			end
-			
+
 			tCurrentGroup = {}
 		end
-		
+
 		if nBestGroupCount >= nMinimumTargets then
 			return core.GetGroupCenter(tBestGroup)
 		end
@@ -298,12 +338,12 @@ local function filterGroupRange(tGroup, vecCenter, nRange)
 				tinsert(tResult, unitTarget)
 			end
 		end	
-	
+
 		if #tResult > 0 then
 			return tResult
 		end
 	end
-	
+
 	return nil
 end
 
@@ -316,7 +356,7 @@ end
 -----------------------------------
 
 local function getDecapKillThreshold()
-	local nSkillLevel = skills.abilExecution:GetLevel()
+	local nSkillLevel = skills.abilDecap:GetLevel()
 
 	if nSkillLevel == 1 then
 		return 300
@@ -347,7 +387,7 @@ local function HarassHeroExecuteOverride(botBrain)
 	local nLastHarassUtility = behaviorLib.lastHarassUtil
 
 	local bActionTaken = false
-	
+
 	if unitSelf:HasState("State_Legionnaire_Ability2_Self") then
 		-- We are currently charging the enemy
 		return true
@@ -388,19 +428,19 @@ local function HarassHeroExecuteOverride(botBrain)
 				end
 			end
 		end
-		
+
 		if bActionTaken then
 		-- Record our last taunt time 
 			object.nLastTauntTime = HoN.GetMatchTime()
 		end
 	end
-	
+
 	-- Barbed Armor
 	if not bActionTaken then
-		local itemExcruciator = core.itemExcruciator
-		if itemExcruciator and itemExcruciator:CanActivate() and object.nLastTauntTime + 500 > HoN.GetMatchTime() then
+		local itemBarbedArmor = core.itemBarbedArmor
+		if itemBarbedArmor and itemBarbedArmor:CanActivate() and object.nLastTauntTime + 500 > HoN.GetMatchTime() then
 			-- Use Barbed within .5 seconds of taunt
-			bActionTaken = core.OrderItemClamp(botBrain, unitSelf, itemExcruciator)
+			bActionTaken = core.OrderItemClamp(botBrain, unitSelf, itemBarbedArmor)
 		end
 	end
 
@@ -417,13 +457,13 @@ local function HarassHeroExecuteOverride(botBrain)
 
 	-- Decap
 	if not bActionTaken then
-		local abilExecution = skills.abilExecution
-		if abilExecution:CanActivate() and nLastHarassUtility > botBrain.nExecutionThreshold then
-			local nRange = abilExecution:GetRange()
+		local abilDecap = skills.abilDecap
+		if abilDecap:CanActivate() and nLastHarassUtility > botBrain.nDecapThreshold then
+			local nRange = abilDecap:GetRange()
 			if nTargetDistanceSq <= (nRange * nRange) then
 				local nInstantKillThreshold = getDecapKillThreshold()
 				if unitTarget:GetHealth() <  nInstantKillThreshold then
-					bActionTaken = core.OrderAbilityEntity(botBrain, abilExecution, unitTarget)
+					bActionTaken = core.OrderAbilityEntity(botBrain, abilDecap, unitTarget)
 				end
 			end
 		end
@@ -438,8 +478,6 @@ end
 
 object.harassExecuteOld = behaviorLib.HarassHeroBehavior["Execute"]
 behaviorLib.HarassHeroBehavior["Execute"] = HarassHeroExecuteOverride
-
-
 
 -------------------------------
 -- 		Jungle Behavior		 --
