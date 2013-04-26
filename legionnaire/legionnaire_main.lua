@@ -315,7 +315,7 @@ end
 --          Decap Logic          --
 -----------------------------------
 
-local function getDecapThreshold()
+local function getDecapKillThreshold()
 	local nSkillLevel = skills.abilExecution:GetLevel()
 
 	if nSkillLevel == 1 then
@@ -421,7 +421,7 @@ local function HarassHeroExecuteOverride(botBrain)
 		if abilExecution:CanActivate() and nLastHarassUtility > botBrain.nExecutionThreshold then
 			local nRange = abilExecution:GetRange()
 			if nTargetDistanceSq <= (nRange * nRange) then
-				local nInstantKillThreshold = getDecapThreshold()
+				local nInstantKillThreshold = getDecapKillThreshold()
 				if unitTarget:GetHealth() <  nInstantKillThreshold then
 					bActionTaken = core.OrderAbilityEntity(botBrain, abilExecution, unitTarget)
 				end
