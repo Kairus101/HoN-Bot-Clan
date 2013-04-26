@@ -216,6 +216,19 @@ end
 object.FindItemsOld = core.FindItems
 core.FindItems = funcFindItemsOverride
 
+----------------------------------------
+--          OnThink Override          --
+----------------------------------------
+
+function object:onthinkOverride(tGameVariables)
+	self:onthinkOld(tGameVariables)
+	
+	jungleLib.assess(self)
+end
+
+object.onthinkOld = object.onthink
+object.onthink 	= object.onthinkOverride
+
 ----------------------------------------------
 --          OnCombatEvent Override          --
 ----------------------------------------------
@@ -479,16 +492,20 @@ end
 object.harassExecuteOld = behaviorLib.HarassHeroBehavior["Execute"]
 behaviorLib.HarassHeroBehavior["Execute"] = HarassHeroExecuteOverride
 
+----------------------------------------
+--          PreGame Override          --
+----------------------------------------
+
+local function zeroUtility(botBrain)
+	return 0
+end
+
+behaviorLib.PositionSelfBehavior["Utility"] = zeroUtility
+--behaviorLib.PreGameBehavior["Utility"] = zeroUtility
+
 -------------------------------
 -- 		Jungle Behavior		 --
 -------------------------------
-behaviorLib.nCreepAggroUtility=0
-behaviorLib.nRecentDamageMul=0.20--0.35
-function zeroUtility(botBrain)
-	return 0
-end
-behaviorLib.PositionSelfBehavior["Utility"] = zeroUtility
---behaviorLib.PreGameBehavior["Utility"] = zeroUtility
 
 ----------------------------------
 --	jungle
@@ -498,6 +515,9 @@ behaviorLib.PositionSelfBehavior["Utility"] = zeroUtility
 --	Move to unoccupied camps
 --  Attack strongest till they are dead
 ----------------------------------
+
+behaviorLib.nCreepAggroUtility=0
+behaviorLib.nRecentDamageMul=0.20--0.35
 
 --@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Jungling BEHAVIOUR
 function jungleUtility(botBrain)
@@ -589,17 +609,9 @@ behaviorLib.jungleBehavior["Execute"] = jungleExecute
 behaviorLib.jungleBehavior["Name"] = "jungle"
 tinsert(behaviorLib.tBehaviors, behaviorLib.jungleBehavior)
 
-function object:onthinkOverride(tGameVariables) --This is run, even while dead. Every frame.
-	self:onthinkOld(tGameVariables)--don't distrupt old think
-	
-	jungleLib.assess(self) --assess camps. Know which are empty etc.
-end
-object.onthinkOld = object.onthink
-object.onthink 	= object.onthinkOverride
-
----------------------------------------
----			Personality				---
----------------------------------------
+-----------------------------------
+--          Custom Chat          --
+-----------------------------------
 
 core.tKillChatKeys={
     "BUAHAHAHA!",
@@ -609,6 +621,7 @@ core.tKillChatKeys={
     "Did I break your spirit?",
     "You spin my head right round, right round. When ya go down, when ya go down down."
 }
+
 core.tDeathChatKeys = {
     "Spinning out of control..",
     "I think I'm gonna throw up...",
