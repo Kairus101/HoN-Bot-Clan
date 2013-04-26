@@ -80,14 +80,17 @@ function jungleLib.assess(botBrain)
 		if (HoN.CanSeePosition(jungleLib.jungleSpots[i].pos))then
 			jungleLib.jungleSpots[i].creepDifficulty=0
 			local nUnitsNearCamp=0
-			local uUnits=HoN.GetUnitsInRadius(jungleLib.jungleSpots[i].pos, 600, 35) --35 is the lowest working number. I have no clue as to why this is, but it is. Deal with it.
+			local uUnits=HoN.GetUnitsInRadius(jungleLib.jungleSpots[i].pos, 600, core.UNIT_MASK_ALIVE + core.UNIT_MASK_UNIT)
 			for key, unit in pairs(uUnits) do
-				nUnitsNearCamp=nUnitsNearCamp+1
-				core.DrawXPosition(unit:GetPosition(), 'red')
-				creepDifficulty=jungleLib.creepDifficulty[unit:GetTypeName()] --add difficult units
-				if addedDifficulty then jungleLib.jungleSpots[i].creepDifficulty=jungleLib.jungleSpots[i].creepDifficulty+creepDifficulty end
+				if unit:GetTeam() ~= core.myTeam and unit:GetTeam() ~= core.enemyTeam then
+					nUnitsNearCamp=nUnitsNearCamp+1
+					core.DrawXPosition(unit:GetPosition(), 'red')
+					creepDifficulty=jungleLib.creepDifficulty[unit:GetTypeName()] --add difficult units
+					if addedDifficulty then jungleLib.jungleSpots[i].creepDifficulty=jungleLib.jungleSpots[i].creepDifficulty+creepDifficulty end
+				end
 			end
-			
+
+			local localNeutrals = core.NumberElements(core.localUnits["neutrals"]) --to not confuse with minions
 			if jungleLib.jungleSpots[i].stacks~=0 and nUnitsNearCamp==0 then --we can see the camp, nothing is there.
 				BotEcho("Camp "..jungleLib.jungleSpots[i].description.." is empty. Are they all dead? "..jungleLib.jungleSpots[i].stacks)
 				jungleLib.jungleSpots[i].stacks=0
@@ -104,6 +107,8 @@ function jungleLib.getNearestCampPos(pos,minimumDifficulty,maximumDifficulty)
 	minimumDifficulty=minimumDifficulty or 0
 	maximumDifficulty=maximumDifficulty or 999
 	
+	local nClosestCamp = -1
+
 	local nClosestSq = 9999*9999
 	for i=1,#jungleLib.jungleSpots do
 		local dist=Vector3.Distance2DSq(pos, jungleLib.jungleSpots[i].pos)
@@ -113,7 +118,7 @@ function jungleLib.getNearestCampPos(pos,minimumDifficulty,maximumDifficulty)
 			nClosestCamp=i
 		end
 	end
-	if (nClosestCamp and jungleLib.jungleSpots[nClosestCamp].stacks>0) then return jungleLib.jungleSpots[nClosestCamp].pos, nClosestCamp end
+	if (nClosestCamp ~= -1 and jungleLib.jungleSpots[nClosestCamp].stacks>0) then return jungleLib.jungleSpots[nClosestCamp].pos, nClosestCamp end
 	return nil
 end
 
