@@ -483,25 +483,14 @@ local function HarassHeroExecuteOverride(botBrain)
 	end
 
 	if not bActionTaken then
-        return object.harassExecuteOld(botBrain)
-    end
+		return object.harassExecuteOld(botBrain)
+	end
 
-    return bActionTaken
+	return bActionTaken
 end
 
 object.harassExecuteOld = behaviorLib.HarassHeroBehavior["Execute"]
 behaviorLib.HarassHeroBehavior["Execute"] = HarassHeroExecuteOverride
-
-----------------------------------------
---          PreGame Override          --
-----------------------------------------
-
-local function zeroUtility(botBrain)
-	return 0
-end
-
-behaviorLib.PositionSelfBehavior["Utility"] = zeroUtility
---behaviorLib.PreGameBehavior["Utility"] = zeroUtility
 
 -------------------------------
 -- 		Jungle Behavior		 --
@@ -608,6 +597,13 @@ behaviorLib.jungleBehavior["Utility"] = jungleUtility
 behaviorLib.jungleBehavior["Execute"] = jungleExecute
 behaviorLib.jungleBehavior["Name"] = "jungle"
 tinsert(behaviorLib.tBehaviors, behaviorLib.jungleBehavior)
+
+local function zeroUtility(botBrain)
+	return 0
+end
+
+behaviorLib.PositionSelfBehavior["Utility"] = zeroUtility
+--behaviorLib.PreGameBehavior["Utility"] = zeroUtility
 
 -----------------------------------
 --          Custom Chat          --
