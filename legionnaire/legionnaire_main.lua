@@ -100,6 +100,8 @@ object.nChargeThreshold = 36
 object.nExecutionThreshold = 38
 object.nPortalKeyThreshold = 20
 
+object.nLastTauntTime = 0
+
 ----------------------------------
 ------Bot Function Overrides------
 ----------------------------------
@@ -240,74 +242,190 @@ end
 object.FindItemsOld = core.FindItems
 core.FindItems = funcFindItemsOverride
 
+----------------------------------------
+--          Portal Key Logic          --
+----------------------------------------
 
------------------------------
-------Harass behaviour-------
------------------------------
+-- Returns the best position to Portal Key - Taunt combo
+-- Returns nil if there are no enemies or there is no group with enough targets in it
+local function getBestPortalKeyTauntPosition(botBrain, vecMyPosition, nMinimumTargets)
+	if nMinimumTargets == nil then
+		nMinimumTargets = 1
+	end
+	
+	local tEnemyHeroes = core.localUnits["EnemyHeroes"]
+	if tEnemyHeroes and core.NumberElements(tEnemyHeroes) >= nMinimumTargets then
+		local nTauntRadius = 300
+		local tCurrentGroup = {}
+		local nCurrentGroupCount = 0
+		local tBestGroup = {}
+		local nBestGroupCount = 0
+		for _, unitTarget in pairs(tEnemyHeroes) do
+			local vecTargetPosition = unitTarget:GetPosition()
+			for _, unitOtherTarget in pairs(tEnemyHeroes) do
+				if Vector3.Distance2DSq(unitOtherTarget:GetPosition(), vecTargetPosition) <= (nTauntRadius * nTauntRadius) then
+					tinsert(tCurrentGroup, unitOtherTarget)
+				end
+			end
 
+			nCurrentGroupCount = #tCurrentGroup
+			if nCurrentGroupCount > nBestGroupCount then
+				tBestGroup = tCurrentGroup
+				nBestGroupCount = nCurrentGroupCount
+			end
+			
+			tCurrentGroup = {}
+		end
+		
+		if nBestGroupCount >= nMinimumTargets then
+			return core.GetGroupCenter(tBestGroup)
+		end
+	end
+
+	return nil
+end
+
+-----------------------------------
+--          Taunt Logic          --
+-----------------------------------
+
+-- Filters a group to be within a given range. Modified from St0l3n_ID's Chronos bot
+local function filterGroupRange(tGroup, vecCenter, nRange)
+	if tGroup and vecCenter and nRange then
+		local tResult = {}
+		for _, unitTarget in pairs(tGroup) do
+			if Vector3.Distance2DSq(unitTarget:GetPosition(), vecCenter) <= (nRange * nRange) then
+				tinsert(tResult, unitTarget)
+			end
+		end	
+	
+		if #tResult > 0 then
+			return tResult
+		end
+	end
+	
+	return nil
+end
+
+local function getTauntRadius()
+	return 300
+end
+
+-----------------------------------
+--          Decap Logic          --
+-----------------------------------
+
+local function getDecapThreshold()
+	local nSkillLevel = skills.abilExecution:GetLevel()
+
+	if nSkillLevel == 1 then
+		return 300
+	elseif nSkillLevel == 2 then
+		return 450
+	elseif nSkillLevel == 3 then
+		return 600
+	else
+		return nil
+	end
+end
+
+----------------------------------------
+--          Harass Behaviour          --
+----------------------------------------
 
 local function HarassHeroExecuteOverride(botBrain)
 
     local unitTarget = behaviorLib.heroTarget
     if unitTarget == nil then
-        return object.harassExecuteOld(botBrain)  --Target is invalid, move on to the next behavior
+        return object.harassExecuteOld(botBrain)
     end
 
+	local unitSelf = core.unitSelf
 	local vecMyPosition = unitSelf:GetPosition()
-	local nAttackRangeSq = core.GetAbsoluteAttackRangeToUnit(unitSelf, unitTarget)
-	nAttackRangeSq = nAttackRangeSq * nAttackRangeSq
-	local nMyExtraRange = core.GetExtraRange(unitSelf)
-
 	local vecTargetPosition = unitTarget:GetPosition()
-	local nTargetExtraRange = core.GetExtraRange(unitTarget)
 	local nTargetDistanceSq = Vector3.Distance2DSq(vecMyPosition, vecTargetPosition)
-	local bTargetRooted = unitTarget:IsStunned() or unitTarget:IsImmobilized() or unitTarget:GetMoveSpeed() < 200
-
 	local nLastHarassUtility = behaviorLib.lastHarassUtil
 
-	--portalkey
+	local bActionTaken = false
+	
+	if unitSelf:HasState("State_Legionnaire_Ability2_Self") then
+		-- We are currently charging the enemy
+		return true
+	end
+
+	-- Portal Key
 	if not bActionTaken then
 		local itemPortalKey = core.itemPortalKey
-		if itemPortalKey then
-			local nPortalKeyRange = itemPortalKey:GetRange()
-			local nRangeLavaSurge = skills.abilLavaSurge:GetRange()
-			if itemPortalKey:CanActivate() and behaviorLib.lastHarassUtil > object.nPortalKeyThreshold then
-				if nTargetDistanceSq > (nRangeTaunt * nRangeTaunt) and nTargetDistanceSq < (nPortalKeyRange*nPortalKeyRange + nRangeTaunt*nRangeTaunt) then
-					if bDebugEchos then BotEcho("PortKey!") end
-					vecCenter = core.GetGroupCenter(core.localUnits["EnemyHeroes"])
-					if vecCenter then
-						bActionTaken = core.OrderItemPosition(botBrain, unitSelf, itemPortalKey, vecCenter)
-					end
+		if itemPortalKey and itemPortalKey:CanActivate() and behaviorLib.lastHarassUtil > object.nPortalKeyThreshold then
+			local vecBestTauntPosition = getBestPortalKeyTauntPosition(botBrain, vecMyPosition, 2)
+			if vecBestTauntPosition then
+				-- Port into two or more enemies
+				bActionTaken = core.OrderItemPosition(botBrain, unitSelf, itemPortalKey, vecBestTauntPosition)
+			else
+				-- Port to a single enemy
+				local nTauntRadius = getTauntRadius() - 25
+				if nTargetDistanceSq > (nTauntRadius * nTauntRadius) then
+					bActionTaken = core.OrderItemPosition(botBrain, unitSelf, itemPortalKey, vecTargetPosition)
 				end
 			end
 		end
 	end
 
-
-	if core.CanSeeUnit(botBrain, unitTarget) then
-
-
-		--Taunt
+	-- Taunt
+	if not bActionTaken then
 		local abilTaunt = skills.abilTaunt
+		if abilTaunt:CanActivate() and nLastHarassUtility > botBrain.nTauntThreshold then
+			local nRadius = getTauntRadius()
+			local tTauntRangeEnemies = filterGroupRange(core.localUnits["EnemyHeroes"], vecMyPosition, nRadius)
+			if tTauntRangeEnemies and #tTauntRangeEnemies > 1 then
+				-- If there are two or more enemy heroes in range then taunt
+				bActionTaken = core.OrderAbility(botBrain, abilTaunt)
+			elseif nTargetDistanceSq <= (nRadius * nRadius) then
+				-- Otherwise Taunt the target only if they are in range and not disabled
+				local bDisabled = unitTarget:IsImmobilized() or unitTarget:IsStunned()
+				if not bDisabled then
+					bActionTaken = core.OrderAbility(botBrain, abilTaunt)
+				end
+			end
+		end
+		
+		if bActionTaken then
+		-- Record our last taunt time 
+			object.nLastTauntTime = HoN.GetMatchTime()
+		end
+	end
+	
+	-- Barbed Armor
+	if not bActionTaken then
 		local itemExcruciator = core.itemExcruciator
-		if not bActionTaken and abilTaunt:CanActivate() and nLastHarassUtility > botBrain.nTauntThreshold then
-			local nRange = abilTaunt:GetRange()
-			bActionTaken = core.OrderAbility(botBrain, abilTaunt, itemExcruciator, nLastHarassUtility)
+		if itemExcruciator and itemExcruciator:CanActivate() and object.nLastTauntTime + 500 > HoN.GetMatchTime() then
+			-- Use Barbed within .5 seconds of taunt
+			bActionTaken = core.OrderItemClamp(botBrain, unitSelf, itemExcruciator)
 		end
+	end
 
-		--Charge
-		local abilChar = skills.abilCharge
-		if not bActionTaken and abilCharge:CanActivate() and nLastHarassUtility > botBrain.nChargeThreshold then
+	-- Charge
+	if not bActionTaken then
+		local abilCharge = skills.abilCharge
+		if abilCharge:CanActivate() and nLastHarassUtility > botBrain.nChargeThreshold then
 			local nRange = abilCharge:GetRange()
-			bActionTaken = core.OrderAbilityEntity(botBrain, abilCharge, unitTarget)
+			if nTargetDistanceSq <= (nRange * nRange) then
+				bActionTaken = core.OrderAbilityEntity(botBrain, abilCharge, unitTarget)
+			end
 		end
+	end
 
-
-		--Execution
+	-- Decap
+	if not bActionTaken then
 		local abilExecution = skills.abilExecution
-		if not bActionTaken and abilExecution:CanActivate() and nLastHarassUtility > botBrain.nExecutionThreshold and unitTarget:CurrentHealthPercentage() < .25 then
+		if abilExecution:CanActivate() and nLastHarassUtility > botBrain.nExecutionThreshold then
 			local nRange = abilExecution:GetRange()
-			bActionTaken = core.OrderAbilityEntity(botBrain, abilExecution, unitTarget)
+			if nTargetDistanceSq <= (nRange * nRange) then
+				local nInstantKillThreshold = getDecapThreshold()
+				if unitTarget:GetHealth() <  nInstantKillThreshold then
+					bActionTaken = core.OrderAbilityEntity(botBrain, abilExecution, unitTarget)
+				end
+			end
 		end
 	end
 
@@ -318,8 +436,8 @@ local function HarassHeroExecuteOverride(botBrain)
     return bActionTaken
 end
 
---object.harassExecuteOld = behaviorLib.HarassHeroBehavior["Execute"]
---behaviorLib.HarassHeroBehavior["Execute"] = HarassHeroExecuteOverride
+object.harassExecuteOld = behaviorLib.HarassHeroBehavior["Execute"]
+behaviorLib.HarassHeroBehavior["Execute"] = HarassHeroExecuteOverride
 
 
 
