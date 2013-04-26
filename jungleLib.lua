@@ -21,7 +21,7 @@ jungleLib.jungleSpots={
 {pos=Vector3.Create(5100,8000),  description="L ancients"             ,difficulty=250 ,stacks=0, creepDifficulty=0 ,outsidePos=Vector3.Create(5500,7800) },
 --Hellbourne
 {pos=Vector3.Create(9400,11200), description="H closest to well"      ,difficulty=100 ,stacks=0, creepDifficulty=0 ,outsidePos=Vector3.Create(8800,11300) },
-{pos=Vector3.Create(7700,11600), description="H easy camp"            ,difficulty=30  ,stacks=0, creepDifficulty=0 ,outsidePos=Vector3.Create(7500,12000) },
+{pos=Vector3.Create(7700,11600), description="H easy camp"            ,difficulty=30  ,stacks=0, creepDifficulty=0 ,outsidePos=Vector3.Create(7500,12200) },
 {pos=Vector3.Create(6600,10500), description="H below easy camp"      ,difficulty=55  ,stacks=0, creepDifficulty=0 ,outsidePos=Vector3.Create(6700,11000) },
 {pos=Vector3.Create(5100,12500), description="H pullable camp"        ,difficulty=55  ,stacks=0, creepDifficulty=0 ,outsidePos=Vector3.Create(5100,13000) },
 {pos=Vector3.Create(4000,11500), description="H far hard camp"        ,difficulty=100 ,stacks=0, creepDifficulty=0 ,outsidePos=Vector3.Create(4400,11700) },
