@@ -471,7 +471,8 @@ end
 
 jungleLib.currentMaxDifficulty=70
 
-jungleLib.nStacking=0--0=nothing 1=waiting/attacking 2=running away
+jungleLib.nStacking=0--0=not 1=waiting/attacking 2=running away
+jungleLib.nStackingCamp=0
 function jungleExecute(botBrain)
 	unitSelf=core.unitSelf
 		
@@ -496,7 +497,7 @@ function jungleExecute(botBrain)
 		if (jungleLib.nStacking~=0 or ((secs>40 or mins==0) and dist<800*800 and dist>400*400)) then --WE ARE STACKING far enough away
 			if (secs<53 and (secs>40 or mins==0)) then
 				jungleLib.nStacking=1
-				BotEcho(camp)
+				jungleLib.nStackingCamp=camp
                 --return core.OrderHoldClamp(botBrain, unitSelf, false)
 				return core.OrderMoveToPosAndHoldClamp(botBrain, core.unitSelf, jungleLib.jungleSpots[camp].outsidePos, false)
 			elseif(jungleLib.nStacking==1 and unitSelf:IsAttackReady()) then--time to attack!
@@ -504,11 +505,11 @@ function jungleExecute(botBrain)
 				return core.OrderAttackPosition(botBrain, unitSelf, vTargetPos,false,false)--attackmove
 			elseif(jungleLib.nStacking~=0 and dist<1500*1500 and secs>50) then--we hit the camp, run!
 				jungleLib.nStacking=2
-				local awayPos=jungleLib.jungleSpots[camp].pos+(jungleLib.jungleSpots[camp].outsidePos-jungleLib.jungleSpots[camp].pos)*5
+				local awayPos=jungleLib.jungleSpots[jungleLib.nStackingCamp].pos+(jungleLib.jungleSpots[jungleLib.nStackingCamp].outsidePos-jungleLib.jungleSpots[jungleLib.nStackingCamp].pos)*5
 				
-				core.DrawXPosition(jungleLib.jungleSpots[camp].pos, 'red')
-				core.DrawXPosition(jungleLib.jungleSpots[camp].outsidePos, 'red')
-				core.DrawDebugArrow(jungleLib.jungleSpots[camp].pos,awayPos, 'green')
+				core.DrawXPosition(jungleLib.jungleSpots[jungleLib.nStackingCamp].pos, 'red')
+				core.DrawXPosition(jungleLib.jungleSpots[jungleLib.nStackingCamp].outsidePos, 'red')
+				core.DrawDebugArrow(jungleLib.jungleSpots[jungleLib.nStackingCamp].pos,awayPos, 'green')
 				
 				return core.OrderMoveToPosClamp(botBrain, core.unitSelf, awayPos, false)
 			else
