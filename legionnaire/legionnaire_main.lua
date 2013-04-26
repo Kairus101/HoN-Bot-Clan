@@ -39,6 +39,10 @@ runfile "bots/eventsLib.lua"
 runfile "bots/metadata.lua"
 runfile "bots/behaviorLib.lua"
 
+runfile "bots/advancedShopping.lua"
+local shopping = object.shoppingHandler
+shopping.Setup(true, true, false, false, false, false)
+
 runfile "bots/jungleLib.lua"
 jungleLib=object.jungleLib
 
@@ -328,12 +332,12 @@ function zeroUtility(botBrain)
 	return 0
 end
 behaviorLib.PositionSelfBehavior["Utility"] = zeroUtility
-behaviorLib.PreGameBehavior["Utility"] = zeroUtility
+--behaviorLib.PreGameBehavior["Utility"] = zeroUtility
 
 ----------------------------------
 --	jungle
 --
---	Utility: 19 always.  This is effectively an "idle" behavior
+--	Utility: 21 always.  This is effectively an "idle" behavior
 --
 --	Move to unoccupied camps
 --  Attack strongest till they are dead
@@ -341,6 +345,9 @@ behaviorLib.PreGameBehavior["Utility"] = zeroUtility
 
 --@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Jungling BEHAVIOUR
 function jungleUtility(botBrain)
+	behaviorLib.nTeamGroupUtilityMul = 0.13+(core.unitSelf:GetLevel()*0.01)--level 9, start grouping.
+	behaviorLib.pushingCap = 13+core.unitSelf:GetLevel()--level 9, start pushing.
+	behaviorLib.nTeamDefendUtilityVal = 13+core.unitSelf:GetLevel()--level 9, start defending.
 	return 21--19
 end
 
@@ -367,7 +374,7 @@ function jungleExecute(botBrain)
 	if (dist>600*600 or jungleLib.nStacking~=0) then --go to next camp
 		--@@@@@@@@@@@@@@@@@@@@@@@@ATTEMPT STACK
 		local mins, secs = jungleLib.getTime()
-		BotEcho("Stacking status: "..jungleLib.nStacking)
+		--BotEcho("Stacking status: "..jungleLib.nStacking)
 		if (jungleLib.nStacking~=0 or ((secs>40 or mins==0) and dist<800*800 and dist>400*400)) then --WE ARE STACKING far enough away
 			if (secs<53 and (secs>40 or mins==0)) then
 				jungleLib.nStacking=1
@@ -441,11 +448,14 @@ core.tKillChatKeys={
     "BUAHAHAHA!",
     "Off with their heads!",
     "I put the meaning into human blender.",
-    "You spin me right round!"
+    "You spin me right round!",
+    "Did I break your spirit?",
+    "You spin my head right round, right round. When ya go down, when ya go down down."
 }
 core.tDeathChatKeys = {
     "Spinning out of control..",
     "I think I'm gonna throw up...",
+    "Stop taunting me!",
     "Off with.....my head?"
 }
 
