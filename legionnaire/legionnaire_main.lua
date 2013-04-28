@@ -51,9 +51,9 @@ runfile "bots/eventsLib.lua"
 runfile "bots/metadata.lua"
 runfile "bots/behaviorLib.lua"
 
---runfile "bots/advancedShopping.lua"
---local shopping = object.shoppingHandler
---shopping.Setup(true, true, false, false, false, false)
+runfile "bots/advancedShopping.lua"
+local shopping = object.shoppingHandler
+shopping.Setup(true, true, false, false, false, false)
 
 runfile "bots/jungleLib.lua"
 local jungleLib=object.jungleLib
@@ -125,7 +125,7 @@ object.nPortalKeyThreshold = 20
 
 behaviorLib.nCreepPushbackMul = 0.3
 behaviorLib.nTargetPositioningMul = 0.8
-
+behaviorLib.safeTreeAngle=360
 object.nLastTauntTime = 0
 
 ------------------------------
@@ -589,14 +589,10 @@ function jungleExecute(botBrain)
 			-- Attack the strongest unit
 			if unitStrongest and unitStrongest:GetPosition() then
 				local nStrongestTargetDistanceSq = Vector3.Distance2DSq(vecMyPos, unitStrongest:GetPosition())
-				if nStrongestTargetDistanceSq < (180 * 180) then
-					return core.OrderAttackClamp(botBrain, unitSelf, unitStrongest, false)
-				end
+				return core.OrderAttackClamp(botBrain, unitSelf, unitStrongest, false)
 			else
 				return core.OrderAttackPosition(botBrain, unitSelf, vecTargetPos, false, false)
 			end
-		else
-			return core.OrderAttackPosition(botBrain, unitSelf, vecTargetPos, false, false)
 		end
 	end
 	
@@ -618,11 +614,19 @@ end
 behaviorLib.PositionSelfBehavior["Utility"] = zeroUtility
 behaviorLib.PreGameBehavior["Utility"] = zeroUtility
 
-function HealAtWellUtilityOverride(botBrain)
-    return object.HealAtWellUtilityOld(botBrain)+(botBrain:GetGold()*10/2000)+ 6*(1-core.unitSelf:GetManaPercent())
+object.bupdatedItems=false
+function ShopUtilityOverride(botBrain)
+	if (not object.bupdatedItems)then--get items at beginning of game.
+		shopping.UpdateItemList(botBrain, true)--force update.
+		object.bupdatedItems=true
+	end
+	if HoN.GetRemainingPreMatchTime() and HoN.GetRemainingPreMatchTime()>60000 then
+		return 100
+	end
+    return object.ShopUtilityOld(botBrain)
 end
-object.HealAtWellUtilityOld = behaviorLib.HealAtWellBehavior["Utility"]
-behaviorLib.HealAtWellBehavior["Utility"] = HealAtWellUtilityOverride
+object.ShopUtilityOld=behaviorLib.ShopBehavior["Utility"]
+behaviorLib.ShopBehavior["Utility"] = ShopUtilityOverride
 
 
 -----------------------------------
