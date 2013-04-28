@@ -492,106 +492,121 @@ end
 object.harassExecuteOld = behaviorLib.HarassHeroBehavior["Execute"]
 behaviorLib.HarassHeroBehavior["Execute"] = HarassHeroExecuteOverride
 
--------------------------------
--- 		Jungle Behavior		 --
--------------------------------
-
-----------------------------------
---	jungle
+---------------------------------------
+--          Jungle Behavior          --
+---------------------------------------
 --
---	Utility: 21 always.  This is effectively an "idle" behavior
+-- Utility: 21
+-- This is effectively an "idle" behavior
 --
---	Move to unoccupied camps
---  Attack strongest till they are dead
-----------------------------------
+-- Execute:
+-- Move to unoccupied camps
+-- Attack strongest Neutral until they are all dead
+--
 
-behaviorLib.nCreepAggroUtility=0
-behaviorLib.nRecentDamageMul=0.20--0.35
+-------- Global Constants & Variables --------
+behaviorLib.nCreepAggroUtility = 0
+behaviorLib.nRecentDamageMul = 0.20
 
---@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Jungling BEHAVIOUR
+jungleLib.nStacking = 0 -- 0 = not 1 = waiting/attacking 2 = running away
+jungleLib.nStackingCamp = 0
+
+jungleLib.currentMaxDifficulty = 70
+
+-------- Behavior Functions --------
 function jungleUtility(botBrain)
-	behaviorLib.nTeamGroupUtilityMul = 0.13+(core.unitSelf:GetLevel()*0.01)--level 9, start grouping.
-	behaviorLib.pushingCap = 13+core.unitSelf:GetLevel()--level 9, start pushing.
-	behaviorLib.nTeamDefendUtilityVal = 13+core.unitSelf:GetLevel()--level 9, start defending.
-	return 21--19
+	-- Wait until level 9 to start grouping/pushing/defending
+	behaviorLib.nTeamGroupUtilityMul = 0.13 + core.unitSelf:GetLevel() * 0.01
+	behaviorLib.pushingCap = 13 + core.unitSelf:GetLevel()
+	behaviorLib.nTeamDefendUtilityVal = 13 + core.unitSelf:GetLevel()
+	
+	return 21
 end
 
-jungleLib.currentMaxDifficulty=70
-
-jungleLib.nStacking=0--0=not 1=waiting/attacking 2=running away
-jungleLib.nStackingCamp=0
 function jungleExecute(botBrain)
-	unitSelf=core.unitSelf
-		
-	local vMyPos=unitSelf:GetPosition()
-	local vTargetPos, camp=jungleLib.getNearestCampPos(vMyPos,0,jungleLib.currentMaxDifficulty)
-	if (not vTargetPos) then
-		if (core.myTeam==HoN.GetHellbourneTeam()) then
+	unitSelf = core.unitSelf
+
+	local vecMyPos = unitSelf:GetPosition()
+	local vecTargetPos, nCamp = jungleLib.getNearestCampPos(vecMyPos, 0, jungleLib.currentMaxDifficulty)
+	if not vecTargetPos then
+		if core.myTeam == HoN.GetHellbourneTeam() then
 			return core.OrderMoveToPosAndHoldClamp(botBrain, unitSelf, jungleLib.jungleSpots[8].outsidePos)
 		else
 			return core.OrderMoveToPosAndHoldClamp(botBrain, unitSelf, jungleLib.jungleSpots[2].outsidePos)
 		end
 	end
-	
-	core.DrawDebugArrow(unitSelf:GetPosition(),vTargetPos, 'green')
 
-	
-	local dist=Vector3.Distance2DSq(vMyPos, vTargetPos)
-	if (dist>600*600 or jungleLib.nStacking~=0) then --go to next camp
-		--@@@@@@@@@@@@@@@@@@@@@@@@ATTEMPT STACK
-		local mins, secs = jungleLib.getTime()
-		--BotEcho("Stacking status: "..jungleLib.nStacking)
-		if (jungleLib.nStacking~=0 or ((secs>40 or mins==0) and dist<800*800 and dist>400*400)) then --WE ARE STACKING far enough away
-			if (secs<53 and (secs>40 or mins==0)) then
-				jungleLib.nStacking=1
-				jungleLib.nStackingCamp=camp
-                --return core.OrderHoldClamp(botBrain, unitSelf, false)
-				return core.OrderMoveToPosAndHoldClamp(botBrain, core.unitSelf, jungleLib.jungleSpots[camp].outsidePos, false)
-			elseif(jungleLib.nStacking==1 and unitSelf:IsAttackReady()) then--time to attack!
-				if (secs>=57) then jungleLib.nStacking=0 end
-				return core.OrderAttackPosition(botBrain, unitSelf, vTargetPos,false,false)--attackmove
-			elseif(jungleLib.nStacking~=0 and dist<1500*1500 and secs>50) then--we hit the camp, run!
-				jungleLib.nStacking=2
-				local awayPos=jungleLib.jungleSpots[jungleLib.nStackingCamp].pos+(jungleLib.jungleSpots[jungleLib.nStackingCamp].outsidePos-jungleLib.jungleSpots[jungleLib.nStackingCamp].pos)*5
+	core.DrawDebugArrow(vecMyPos, vecTargetPos, 'green')
+
+	local nTargetDistanceSq = Vector3.Distance2DSq(vecMyPos, vecTargetPos)
+	if nTargetDistanceSq > (600 * 600) or jungleLib.nStacking ~= 0 then
+		-- Move to the next camp
+		local nMins, nSecs = jungleLib.getTime()
+		if jungleLib.nStacking ~= 0 or ((nSecs > 40 or nMins == 0) and nTargetDistanceSq < (800 * 800) and nTargetDistanceSq > (400 * 400)) then
+			-- Stack the camp if possible
+			if nSecs < 53 and (nSecs > 40 or nMins == 0) then
+				-- Wait outside the camp
+				jungleLib.nStacking = 1
+				jungleLib.nStackingCamp = nCamp
 				
+				return core.OrderMoveToPosAndHoldClamp(botBrain, core.unitSelf, jungleLib.jungleSpots[nCamp].outsidePos, false)
+			elseif jungleLib.nStacking == 1 and unitSelf:IsAttackReady() then
+				-- Attack the units in the camp
+				if nSecs >= 57 then 
+					-- Missed our chance to stack
+					jungleLib.nStacking = 0 
+				end
+				
+				return core.OrderAttackPosition(botBrain, unitSelf, vecTargetPos,false,false)
+			elseif jungleLib.nStacking ~= 0 and nTargetDistanceSq < (1500 * 1500) and nSecs > 50 then
+				-- Move away from the units in the camp
+				jungleLib.nStacking = 2
+				local vecAwayPos = jungleLib.jungleSpots[jungleLib.nStackingCamp].pos + (jungleLib.jungleSpots[jungleLib.nStackingCamp].outsidePos - jungleLib.jungleSpots[jungleLib.nStackingCamp].pos) * 5
+
 				core.DrawXPosition(jungleLib.jungleSpots[jungleLib.nStackingCamp].pos, 'red')
 				core.DrawXPosition(jungleLib.jungleSpots[jungleLib.nStackingCamp].outsidePos, 'red')
-				core.DrawDebugArrow(jungleLib.jungleSpots[jungleLib.nStackingCamp].pos,awayPos, 'green')
+				core.DrawDebugArrow(jungleLib.jungleSpots[jungleLib.nStackingCamp].pos,vecAwayPos, 'green')
+
+				return core.OrderMoveToPosClamp(botBrain, core.unitSelf, vecAwayPos, false)
+			else
+				-- Finished stacking
+				jungleLib.nStacking = 0
 				
-				return core.OrderMoveToPosClamp(botBrain, core.unitSelf, awayPos, false)
-			else
-				jungleLib.nStacking=0
-				return core.OrderMoveToPosAndHoldClamp(botBrain, unitSelf, vTargetPos)
+				return core.OrderMoveToPosAndHoldClamp(botBrain, unitSelf, vecTargetPos)
 			end
 		else
-			return core.OrderMoveToPosAndHoldClamp(botBrain, unitSelf, vTargetPos)
+			-- Otherwise just move to camp
+			return core.OrderMoveToPosAndHoldClamp(botBrain, unitSelf, vecTargetPos)
 		end
-	else --kill camp
-		local uUnits=HoN.GetUnitsInRadius(vMyPos, 600, 35) --35 is the lowest working number. I have no clue as to why this is, but it is. Deal with it.
-		if (uUnits~=nil)then
-			--Get all creeps nearby and put them into a single table.
-			local nHighestHealth=0
-			local highestUnit=nil
-			for key, unit in pairs(uUnits) do
-				if (unit:GetHealth()>nHighestHealth and unit:IsAlive())then
-					highestUnit=unit
-					nHighestHealth=unit:GetHealth()
+	else 
+		-- Kill neutrals in the camp
+		local tUnits = HoN.GetUnitsInRadius(vecMyPos, 600, core.UNIT_MASK_ALIVE + core.UNIT_MASK_UNIT)
+		if tUnits then
+			-- Find the strongest unit in the camp
+			local nHighestHealth = 0
+			local unitStrongest = nil
+			for _, unitTarget in pairs(tUnits) do
+				if unitTarget:GetHealth() > nHighestHealth and unitTarget:IsAlive() then
+					unitStrongest = unitTarget
+					nHighestHealth = unitTarget:GetHealth()
 				end
 			end
-			if (highestUnit and highestUnit:GetPosition()) then
-				local dist=Vector3.Distance2DSq(vMyPos, highestUnit:GetPosition())
-				if (dist<16384*2) then
-					return core.OrderAttackClamp(botBrain, unitSelf, highestUnit,false)
+			
+			-- Attack the strongest unit
+			if unitStrongest and unitStrongest:GetPosition() then
+				local nStrongestTargetDistanceSq = Vector3.Distance2DSq(vecMyPos, unitStrongest:GetPosition())
+				if nStrongestTargetDistanceSq < (180 * 180) then
+					return core.OrderAttackClamp(botBrain, unitSelf, unitStrongest, false)
 				end
 			else
-				return core.OrderAttackPosition(botBrain, unitSelf, vTargetPos,false,false)--attackmove
+				return core.OrderAttackPosition(botBrain, unitSelf, vecTargetPos, false, false)
 			end
-		else
-			return core.OrderAttackPosition(botBrain, unitSelf, vTargetPos,false,false)--attackmove
 		end
 	end
-	return true
+	
+	return false
 end
+
 behaviorLib.jungleBehavior = {}
 behaviorLib.jungleBehavior["Utility"] = jungleUtility
 behaviorLib.jungleBehavior["Execute"] = jungleExecute
