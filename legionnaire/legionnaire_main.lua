@@ -51,12 +51,12 @@ runfile "bots/eventsLib.lua"
 runfile "bots/metadata.lua"
 runfile "bots/behaviorLib.lua"
 
-runfile "bots/advancedShopping.lua"
-local shopping = object.shoppingHandler
-shopping.Setup(true, true, false, false, false, false)
+--runfile "bots/advancedShopping.lua"
+--local shopping = object.shoppingHandler
+--shopping.Setup(true, true, false, false, false, false)
 
 runfile "bots/jungleLib.lua"
-jungleLib=object.jungleLib
+local jungleLib=object.jungleLib
 
 local core, eventsLib, behaviorLib, metadata, skills = object.core, object.eventsLib, object.behaviorLib, object.metadata, object.skills
 
@@ -123,8 +123,8 @@ object.nPortalKeyThreshold = 20
 
 -- Other variables
 
-behaviorLib.nCreepPushbackMul = 0.5
-behaviorLib.nTargetPositioningMul = 0.6
+behaviorLib.nCreepPushbackMul = 0.3
+behaviorLib.nTargetPositioningMul = 0.8
 
 object.nLastTauntTime = 0
 
@@ -186,10 +186,6 @@ local function funcFindItemsOverride(botBrain)
 		core.itemBarbedArmor = nil
 	end
 
-	if core.itemBloodChalice ~=nil and not core.itemBloodChalice:IsValid() then
-		core.itemBloodChalice = nil
-	end
-
 	if bUpdated then
 		if core.itemPortalKey and core.itemGhostMarchers and core.itemBarbedArmor and core.itemBloodChalice then
 			return
@@ -205,8 +201,6 @@ local function funcFindItemsOverride(botBrain)
 					core.itemGhostMarchers = core.WrapInTable(curItem)
 				elseif core.itemBarbedArmor == nil and curItem:GetName() == "Item_Excruciator" then
 					core.itemBarbedArmor = core.WrapInTable(curItem)
-				elseif core.itemBloodChalice == nil and curItem:GetName() == "Item_BloodChalice" then
-					core.itemBloodChalice = core.WrapInTable(curItem)
 				end
 			end
 		end
@@ -515,16 +509,18 @@ jungleLib.currentMaxDifficulty = 70
 
 -------- Behavior Functions --------
 function jungleUtility(botBrain)
+	if HoN.GetRemainingPreMatchTime() and HoN.GetRemainingPreMatchTime()>40000 then
+		return 0
+	end
 	-- Wait until level 9 to start grouping/pushing/defending
 	behaviorLib.nTeamGroupUtilityMul = 0.13 + core.unitSelf:GetLevel() * 0.01
 	behaviorLib.pushingCap = 13 + core.unitSelf:GetLevel()
 	behaviorLib.nTeamDefendUtilityVal = 13 + core.unitSelf:GetLevel()
-	
 	return 21
 end
 
 function jungleExecute(botBrain)
-	unitSelf = core.unitSelf
+	local unitSelf = core.unitSelf
 
 	local vecMyPos = unitSelf:GetPosition()
 	local vecTargetPos, nCamp = jungleLib.getNearestCampPos(vecMyPos, 0, jungleLib.currentMaxDifficulty)
@@ -562,7 +558,6 @@ function jungleExecute(botBrain)
 				-- Move away from the units in the camp
 				jungleLib.nStacking = 2
 				local vecAwayPos = jungleLib.jungleSpots[jungleLib.nStackingCamp].pos + (jungleLib.jungleSpots[jungleLib.nStackingCamp].outsidePos - jungleLib.jungleSpots[jungleLib.nStackingCamp].pos) * 5
-
 				core.DrawXPosition(jungleLib.jungleSpots[jungleLib.nStackingCamp].pos, 'red')
 				core.DrawXPosition(jungleLib.jungleSpots[jungleLib.nStackingCamp].outsidePos, 'red')
 				core.DrawDebugArrow(jungleLib.jungleSpots[jungleLib.nStackingCamp].pos,vecAwayPos, 'green')
@@ -571,7 +566,6 @@ function jungleExecute(botBrain)
 			else
 				-- Finished stacking
 				jungleLib.nStacking = 0
-				
 				return core.OrderMoveToPosAndHoldClamp(botBrain, unitSelf, vecTargetPos)
 			end
 		else
@@ -580,7 +574,7 @@ function jungleExecute(botBrain)
 		end
 	else 
 		-- Kill neutrals in the camp
-		local tUnits = HoN.GetUnitsInRadius(vecMyPos, 600, core.UNIT_MASK_ALIVE + core.UNIT_MASK_UNIT)
+		local tUnits = HoN.GetUnitsInRadius(vecMyPos, 800, core.UNIT_MASK_ALIVE + core.UNIT_MASK_UNIT)
 		if tUnits then
 			-- Find the strongest unit in the camp
 			local nHighestHealth = 0
@@ -601,6 +595,8 @@ function jungleExecute(botBrain)
 			else
 				return core.OrderAttackPosition(botBrain, unitSelf, vecTargetPos, false, false)
 			end
+		else
+			return core.OrderAttackPosition(botBrain, unitSelf, vecTargetPos, false, false)
 		end
 	end
 	
@@ -613,12 +609,21 @@ behaviorLib.jungleBehavior["Execute"] = jungleExecute
 behaviorLib.jungleBehavior["Name"] = "jungle"
 tinsert(behaviorLib.tBehaviors, behaviorLib.jungleBehavior)
 
-local function zeroUtility(botBrain)
+-------------------------------
+-- 		Behavior Changes	 --
+-------------------------------
+function zeroUtility(botBrain)
 	return 0
 end
-
 behaviorLib.PositionSelfBehavior["Utility"] = zeroUtility
---behaviorLib.PreGameBehavior["Utility"] = zeroUtility
+behaviorLib.PreGameBehavior["Utility"] = zeroUtility
+
+function HealAtWellUtilityOverride(botBrain)
+    return object.HealAtWellUtilityOld(botBrain)+(botBrain:GetGold()*10/2000)+ 6*(1-core.unitSelf:GetManaPercent())
+end
+object.HealAtWellUtilityOld = behaviorLib.HealAtWellBehavior["Utility"]
+behaviorLib.HealAtWellBehavior["Utility"] = HealAtWellUtilityOverride
+
 
 -----------------------------------
 --          Custom Chat          --
