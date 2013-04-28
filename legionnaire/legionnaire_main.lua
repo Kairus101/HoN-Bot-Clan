@@ -83,9 +83,9 @@ object.heroName = 'Hero_Legionnaire'
 behaviorLib.StartingItems =
     {"2 Item_IronBuckler", "Item_RunesOfTheBlight"}
 behaviorLib.LaneItems =
-    {"Item_Lifetube", "Item_Marchers", "Item_Shield2", "Item_EnhancedMarchers"} -- Shield2 is HotBL
+    {"Item_Lifetube", "Item_Marchers", "Item_Shield2"} -- Shield2 is HotBL
 behaviorLib.MidItems =
-    {"Item_EnhancedMarchers", "Item_BloodChalice", "Item_PortalKey"} 
+    {"Item_EnhancedMarchers", "Item_PortalKey"} 
 behaviorLib.LateItems =
     {"Item_Excruciator", "Item_SolsBulwark", "Item_DaemonicBreastplate"} --Excruciator is Barbed Armor
 
@@ -187,7 +187,7 @@ local function funcFindItemsOverride(botBrain)
 	end
 
 	if bUpdated then
-		if core.itemPortalKey and core.itemGhostMarchers and core.itemBarbedArmor and core.itemBloodChalice then
+		if core.itemPortalKey and core.itemGhostMarchers and core.itemBarbedArmor then
 			return
 		end
 
