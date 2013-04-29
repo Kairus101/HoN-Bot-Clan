@@ -10,18 +10,17 @@
 ----------------------------------------------
 --       A HoN Community Bot Project        --
 ----------------------------------------------
---              Created by:                 --
+--                Created by:               --
 ----------------------------------------------
---            kairus101 - Jungling          --
---   Dark_Fire - Code cleanup/abilitys      --
---  NoseNuggets - Bot base code and idea    --
+--           kairus101 - Jungling           --
+--    DarkFire - Code Cleanup & Abilities   --
+--    NoseNuggets - Bot Base Code & Ideas   --
 ----------------------------------------------
---            With thanks to                --
+--            Special Thanks To:            --
 ----------------------------------------------
---         Schnarchnase for courier         --
---          fane_maciuca for ideas          --
+--       Schnarchnase - Shop & Courier      --
+--           fane_maciuca - Ideas           --
 ----------------------------------------------
-
 
 ------------------------------------------
 --          Bot Initialization          --
@@ -68,7 +67,7 @@ local shopping = object.shoppingHandler
 shopping.Setup(true, true, false, false, false, false)
 
 runfile "bots/jungleLib.lua"
-local jungleLib=object.jungleLib
+local jungleLib = object.jungleLib
 
 local core, eventsLib, behaviorLib, metadata, skills = object.core, object.eventsLib, object.behaviorLib, object.metadata, object.skills
 
@@ -137,7 +136,9 @@ object.nPortalKeyThreshold = 20
 
 behaviorLib.nCreepPushbackMul = 0.3
 behaviorLib.nTargetPositioningMul = 0.8
-behaviorLib.safeTreeAngle=360
+
+behaviorLib.safeTreeAngle = 360
+
 object.nLastTauntTime = 0
 
 ------------------------------
@@ -233,7 +234,7 @@ function object:onthinkOverride(tGameVariables)
 end
 
 object.onthinkOld = object.onthink
-object.onthink 	= object.onthinkOverride
+object.onthink = object.onthinkOverride
 
 ----------------------------------------------
 --          OnCombatEvent Override          --
@@ -267,7 +268,7 @@ function object:oncombateventOverride(EventData)
 end
 
 object.oncombateventOld = object.oncombatevent
-object.oncombatevent    = object.oncombateventOverride
+object.oncombatevent = object.oncombateventOverride
 
 ----------------------------------------------------
 --          CustomHarassUtility Override          --
@@ -514,7 +515,7 @@ behaviorLib.HarassHeroBehavior["Execute"] = HarassHeroExecuteOverride
 behaviorLib.nCreepAggroUtility = 0
 behaviorLib.nRecentDamageMul = 0.20
 
-jungleLib.nStacking = 0 -- 0 = not 1 = waiting/attacking 2 = running away
+jungleLib.nStacking = 0 -- 0 = not, 1 = waiting/attacking 2, = running away
 jungleLib.nStackingCamp = 0
 
 jungleLib.currentMaxDifficulty = 70
@@ -637,8 +638,8 @@ behaviorLib.PreGameBehavior["Utility"] = zeroUtility
 object.bupdatedItems = false
 
 function ShopUtilityOverride(botBrain)
-	if not object.bupdatedItems then--get items at beginning of game.
-		shopping.UpdateItemList(botBrain, true)--force update.
+	if not object.bupdatedItems then -- Get items at beginning of game.
+		shopping.UpdateItemList(botBrain, true) -- Force an update.
 		object.bupdatedItems = true
 	end
 	
