@@ -87,7 +87,7 @@ behaviorLib.LaneItems =
 behaviorLib.MidItems =
 	{"Item_EnhancedMarchers", "Item_PortalKey"} 
 behaviorLib.LateItems =
-	{"Item_Excruciator", "Item_SolsBulwark", "Item_DaemonicBreastplate"} --Excruciator is Barbed Armor
+	{"Item_Excruciator", "Item_SolsBulwark", "Item_DaemonicBreastplate", "Item_BehemothsHeart", "Item_Freeze"} --Excruciator is Barbed Armor, Freeze is Frostwolf's Skull.
 
 -- Skillbuild. 0 is Taunt, 1 is Charge, 2 is Whirling Blade, 3 is Execution, 4 is Attributes
 object.tSkills = {
@@ -103,8 +103,8 @@ object.tSkills = {
 object.nTauntUp = 7
 object.nChargeUp = 5
 object.nDecapUp = 13
-object.nPortalKeyUp = 0
-object.nBarbedArmorUp = 0
+object.nPortalKeyUp = 7
+object.nBarbedArmorUp = 7
 
 -- Bonus agression points that are applied to the bot upon successfully using a skill/item
 
@@ -521,6 +521,7 @@ end
 
 function jungleExecute(botBrain)
 	local unitSelf = core.unitSelf
+	local debugMode=false
 
 	local vecMyPos = unitSelf:GetPosition()
 	local vecTargetPos, nCamp = jungleLib.getNearestCampPos(vecMyPos, 0, jungleLib.currentMaxDifficulty)
@@ -532,7 +533,7 @@ function jungleExecute(botBrain)
 		end
 	end
 
-	core.DrawDebugArrow(vecMyPos, vecTargetPos, 'green')
+	if debugMode then core.DrawDebugArrow(vecMyPos, vecTargetPos, 'green') end
 
 	local nTargetDistanceSq = Vector3.Distance2DSq(vecMyPos, vecTargetPos)
 	if nTargetDistanceSq > (600 * 600) or jungleLib.nStacking ~= 0 then
@@ -558,9 +559,11 @@ function jungleExecute(botBrain)
 				-- Move away from the units in the camp
 				jungleLib.nStacking = 2
 				local vecAwayPos = jungleLib.jungleSpots[jungleLib.nStackingCamp].pos + (jungleLib.jungleSpots[jungleLib.nStackingCamp].outsidePos - jungleLib.jungleSpots[jungleLib.nStackingCamp].pos) * 5
-				core.DrawXPosition(jungleLib.jungleSpots[jungleLib.nStackingCamp].pos, 'red')
-				core.DrawXPosition(jungleLib.jungleSpots[jungleLib.nStackingCamp].outsidePos, 'red')
-				core.DrawDebugArrow(jungleLib.jungleSpots[jungleLib.nStackingCamp].pos,vecAwayPos, 'green')
+				if debugMode then
+					core.DrawXPosition(jungleLib.jungleSpots[jungleLib.nStackingCamp].pos, 'red')
+					core.DrawXPosition(jungleLib.jungleSpots[jungleLib.nStackingCamp].outsidePos, 'red')
+					core.DrawDebugArrow(jungleLib.jungleSpots[jungleLib.nStackingCamp].pos,vecAwayPos, 'green')
+				end
 
 				return core.OrderMoveToPosClamp(botBrain, core.unitSelf, vecAwayPos, false)
 			else
