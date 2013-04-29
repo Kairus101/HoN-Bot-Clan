@@ -1,3 +1,9 @@
+----------------------------------------------
+--                JungleLib                 --
+----------------------------------------------
+--     Created by Kairus101 for legoBot     --
+----------------------------------------------
+
 local _G = getfenv(0)
 local object = _G.object
 
@@ -9,7 +15,6 @@ local ceil, floor, pi, tan, atan, atan2, abs, cos, sin, acos, max, random = _G.m
 
 local BotEcho, VerboseLog, BotLog = core.BotEcho, core.VerboseLog, core.BotLog
 
-BotEcho("Loading jungleLib!")
 
 local Hellbourne = HoN.GetHellbourneTeam()
 local legion = HoN.GetLegionTeam()
@@ -73,7 +78,8 @@ function jungleLib.assess(botBrain)
 	jungleLib.minutesPassed=mins
 
 	--CHECK NEUTRAL SPAWN CAMPS
-	local debug=true
+	local debug=false
+	
 	for i=1,#jungleLib.jungleSpots do
 		if (debug) then
 			if (jungleLib.jungleSpots[i].stacks==0) then
@@ -97,12 +103,12 @@ function jungleLib.assess(botBrain)
 			end
 			--local localNeutrals = core.NumberElements(core.localUnits["neutrals"]) --to not confuse with minions
 			if jungleLib.jungleSpots[i].stacks~=0 and nUnitsNearCamp==0 then --we can see the camp, nothing is there.
-				BotEcho("Camp "..jungleLib.jungleSpots[i].description.." is empty. Are they all dead? "..jungleLib.jungleSpots[i].stacks)
+				if (debug) then BotEcho("Camp "..jungleLib.jungleSpots[i].description.." is empty. Are they all dead? "..jungleLib.jungleSpots[i].stacks) end
 				if secs>37 then jungleLib.jungleSpots[i].corpseBlocking=true end --perhaps add to this. This is a corpse check.
 				jungleLib.jungleSpots[i].stacks=0
 			end
 			if (nUnitsNearCamp~=0 and jungleLib.jungleSpots[i].stacks==0 ) then --this shouldn't be true. New units should be made on the minute.
-				BotEcho("Camp "..jungleLib.jungleSpots[i].description.." isn't empty, but I thought it was... Maybe I pulled it too far?")
+				if (debug) then BotEcho("Camp "..jungleLib.jungleSpots[i].description.." isn't empty, but I thought it was... Maybe I pulled it too far?") end
 				jungleLib.jungleSpots[i].stacks=1
 			end
 		end

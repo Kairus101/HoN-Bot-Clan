@@ -10,6 +10,17 @@
 ----------------------------------------------
 --       A HoN Community Bot Project        --
 ----------------------------------------------
+--                Created by:               --
+----------------------------------------------
+--           kairus101 - Jungling           --
+--    DarkFire - Code Cleanup & Abilities   --
+--    NoseNuggets - Bot Base Code & Ideas   --
+----------------------------------------------
+--            Special Thanks To:            --
+----------------------------------------------
+--       Schnarchnase - Shop & Courier      --
+--           fane_maciuca - Ideas           --
+----------------------------------------------
 
 ------------------------------------------
 --          Bot Initialization          --
@@ -56,14 +67,14 @@ local shopping = object.shoppingHandler
 shopping.Setup(true, true, false, false, false, false)
 
 runfile "bots/jungleLib.lua"
-local jungleLib=object.jungleLib
+local jungleLib = object.jungleLib
 
 local core, eventsLib, behaviorLib, metadata, skills = object.core, object.eventsLib, object.behaviorLib, object.metadata, object.skills
 
 local print, ipairs, pairs, string, table, next, type, tinsert, tremove, tsort, format, tostring, tonumber, strfind, strsub
-    = _G.print, _G.ipairs, _G.pairs, _G.string, _G.table, _G.next, _G.type, _G.table.insert, _G.table.remove, _G.table.sort, _G.string.format, _G.tostring, _G.tonumber, _G.string.find, _G.string.sub
+	= _G.print, _G.ipairs, _G.pairs, _G.string, _G.table, _G.next, _G.type, _G.table.insert, _G.table.remove, _G.table.sort, _G.string.format, _G.tostring, _G.tonumber, _G.string.find, _G.string.sub
 local ceil, floor, pi, tan, atan, atan2, abs, cos, sin, acos, max, random
-    = _G.math.ceil, _G.math.floor, _G.math.pi, _G.math.tan, _G.math.atan, _G.math.atan2, _G.math.abs, _G.math.cos, _G.math.sin, _G.math.acos, _G.math.max, _G.math.random
+	= _G.math.ceil, _G.math.floor, _G.math.pi, _G.math.tan, _G.math.atan, _G.math.atan2, _G.math.abs, _G.math.cos, _G.math.sin, _G.math.acos, _G.math.max, _G.math.random
 
 local BotEcho, VerboseLog, BotLog = core.BotEcho, core.VerboseLog, core.BotLog
 local Clamp = core.Clamp
@@ -81,21 +92,21 @@ object.heroName = 'Hero_Legionnaire'
 
 -- Item buy order. internal names
 behaviorLib.StartingItems =
-    {"2 Item_IronBuckler", "Item_RunesOfTheBlight"}
+	{"2 Item_IronBuckler", "Item_RunesOfTheBlight"}
 behaviorLib.LaneItems =
-    {"Item_Lifetube", "Item_Marchers", "Item_Shield2"} -- Shield2 is HotBL
+	{"Item_Lifetube", "Item_Marchers", "Item_Shield2"} -- Shield2 is HotBL
 behaviorLib.MidItems =
-    {"Item_EnhancedMarchers", "Item_PortalKey"} 
+	{"Item_EnhancedMarchers", "Item_PortalKey"} 
 behaviorLib.LateItems =
-    {"Item_Excruciator", "Item_SolsBulwark", "Item_DaemonicBreastplate"} --Excruciator is Barbed Armor
+	{"Item_Excruciator", "Item_SolsBulwark", "Item_DaemonicBreastplate", "Item_BehemothsHeart", "Item_Freeze"} --Excruciator is Barbed Armor, Freeze is Frostwolf's Skull.
 
 -- Skillbuild. 0 is Taunt, 1 is Charge, 2 is Whirling Blade, 3 is Execution, 4 is Attributes
 object.tSkills = {
-    2, 1, 2, 0, 2,
-    3, 2, 1, 1, 1,
-    3, 0, 0, 0, 4,
-    3, 4, 4, 4, 4,
-    4, 4, 4, 4, 4
+	2, 1, 2, 0, 2,
+	3, 2, 1, 1, 1,
+	3, 0, 0, 0, 4,
+	3, 4, 4, 4, 4,
+	4, 4, 4, 4, 4
 }
 
 -- Bonus agression points if a skill/item is available for use
@@ -103,8 +114,8 @@ object.tSkills = {
 object.nTauntUp = 7
 object.nChargeUp = 5
 object.nDecapUp = 13
-object.nPortalKeyUp = 0
-object.nBarbedArmorUp = 0
+object.nPortalKeyUp = 7
+object.nBarbedArmorUp = 7
 
 -- Bonus agression points that are applied to the bot upon successfully using a skill/item
 
@@ -125,7 +136,9 @@ object.nPortalKeyThreshold = 20
 
 behaviorLib.nCreepPushbackMul = 0.3
 behaviorLib.nTargetPositioningMul = 0.8
-behaviorLib.safeTreeAngle=360
+
+behaviorLib.safeTreeAngle = 360
+
 object.nLastTauntTime = 0
 
 ------------------------------
@@ -221,7 +234,7 @@ function object:onthinkOverride(tGameVariables)
 end
 
 object.onthinkOld = object.onthink
-object.onthink 	= object.onthinkOverride
+object.onthink = object.onthinkOverride
 
 ----------------------------------------------
 --          OnCombatEvent Override          --
@@ -255,22 +268,22 @@ function object:oncombateventOverride(EventData)
 end
 
 object.oncombateventOld = object.oncombatevent
-object.oncombatevent    = object.oncombateventOverride
+object.oncombatevent = object.oncombateventOverride
 
 ----------------------------------------------------
 --          CustomHarassUtility Override          --
 ----------------------------------------------------
 
 local function CustomHarassUtilityFnOverride(hero)
-    local nUtility = 0
-
-    if skills.abilTaunt:CanActivate() then
-        nUtility = nUtility + object.nTauntUp
-    end
-
-    if skills.abilCharge:CanActivate() then
-        nUtility = nUtility + object.nChargeUp
-    end
+	local nUtility = 0
+	
+	if skills.abilTaunt:CanActivate() then
+		nUtility = nUtility + object.nTauntUp
+	end
+	
+	if skills.abilCharge:CanActivate() then
+		nUtility = nUtility + object.nChargeUp
+	end
 
 	if skills.abilDecap:CanActivate() then
 		nUtility = nUtility + object.nDecapUp
@@ -283,54 +296,11 @@ local function CustomHarassUtilityFnOverride(hero)
 	if object.itemBarbedArmor and object.itemBarbedArmor:CanActivate() then
 		nUtility = nUtility + object.nBarbedArmorUp
 	end
-
-    return nUtility
+	
+	return nUtility
 end
 
 behaviorLib.CustomHarassUtility = CustomHarassUtilityFnOverride
-
-----------------------------------------
---          Portal Key Logic          --
-----------------------------------------
-
--- Returns the best position to Portal Key - Taunt combo
--- Returns nil if there are no enemies or there is no group with enough targets in it
-local function getBestPortalKeyTauntPosition(botBrain, vecMyPosition, nMinimumTargets)
-	if nMinimumTargets == nil then
-		nMinimumTargets = 1
-	end
-
-	local tEnemyHeroes = core.localUnits["EnemyHeroes"]
-	if tEnemyHeroes and core.NumberElements(tEnemyHeroes) >= nMinimumTargets then
-		local nTauntRadius = 300
-		local tCurrentGroup = {}
-		local nCurrentGroupCount = 0
-		local tBestGroup = {}
-		local nBestGroupCount = 0
-		for _, unitTarget in pairs(tEnemyHeroes) do
-			local vecTargetPosition = unitTarget:GetPosition()
-			for _, unitOtherTarget in pairs(tEnemyHeroes) do
-				if Vector3.Distance2DSq(unitOtherTarget:GetPosition(), vecTargetPosition) <= (nTauntRadius * nTauntRadius) then
-					tinsert(tCurrentGroup, unitOtherTarget)
-				end
-			end
-
-			nCurrentGroupCount = #tCurrentGroup
-			if nCurrentGroupCount > nBestGroupCount then
-				tBestGroup = tCurrentGroup
-				nBestGroupCount = nCurrentGroupCount
-			end
-
-			tCurrentGroup = {}
-		end
-
-		if nBestGroupCount >= nMinimumTargets then
-			return core.GetGroupCenter(tBestGroup)
-		end
-	end
-
-	return nil
-end
 
 -----------------------------------
 --          Taunt Logic          --
@@ -377,15 +347,58 @@ local function getDecapKillThreshold()
 end
 
 ----------------------------------------
+--          Portal Key Logic          --
+----------------------------------------
+
+-- Returns the best position to Portal Key - Taunt combo
+-- Returns nil if there are no enemies or there is no group with enough targets in it
+local function getBestPortalKeyTauntPosition(botBrain, vecMyPosition, nMinimumTargets)
+	if nMinimumTargets == nil then
+		nMinimumTargets = 1
+	end
+
+	local tEnemyHeroes = core.localUnits["EnemyHeroes"]
+	if tEnemyHeroes and core.NumberElements(tEnemyHeroes) >= nMinimumTargets then
+		local nTauntRadius = getTauntRadius() - 25
+		local tCurrentGroup = {}
+		local nCurrentGroupCount = 0
+		local tBestGroup = {}
+		local nBestGroupCount = 0
+		for _, unitTarget in pairs(tEnemyHeroes) do
+			local vecTargetPosition = unitTarget:GetPosition()
+			for _, unitOtherTarget in pairs(tEnemyHeroes) do
+				if Vector3.Distance2DSq(unitOtherTarget:GetPosition(), vecTargetPosition) <= (nTauntRadius * nTauntRadius) then
+					tinsert(tCurrentGroup, unitOtherTarget)
+				end
+			end
+
+			nCurrentGroupCount = #tCurrentGroup
+			if nCurrentGroupCount > nBestGroupCount then
+				tBestGroup = tCurrentGroup
+				nBestGroupCount = nCurrentGroupCount
+			end
+
+			tCurrentGroup = {}
+		end
+
+		if nBestGroupCount >= nMinimumTargets then
+			return core.GetGroupCenter(tBestGroup)
+		end
+	end
+
+	return nil
+end
+
+----------------------------------------
 --          Harass Behaviour          --
 ----------------------------------------
 
 local function HarassHeroExecuteOverride(botBrain)
-
-    local unitTarget = behaviorLib.heroTarget
-    if unitTarget == nil then
-        return object.harassExecuteOld(botBrain)
-    end
+	
+	local unitTarget = behaviorLib.heroTarget
+	if unitTarget == nil then
+		return object.harassExecuteOld(botBrain)
+	end
 
 	local unitSelf = core.unitSelf
 	local vecMyPosition = unitSelf:GetPosition()
@@ -422,7 +435,7 @@ local function HarassHeroExecuteOverride(botBrain)
 	if not bActionTaken then
 		local abilTaunt = skills.abilTaunt
 		if abilTaunt:CanActivate() and nLastHarassUtility > botBrain.nTauntThreshold then
-			local nRadius = getTauntRadius()
+			local nRadius = getTauntRadius() - 25
 			local tTauntRangeEnemies = filterGroupRange(core.localUnits["EnemyHeroes"], vecMyPosition, nRadius)
 			if tTauntRangeEnemies and #tTauntRangeEnemies > 1 then
 				-- If there are two or more enemy heroes in range then taunt
@@ -502,7 +515,7 @@ behaviorLib.HarassHeroBehavior["Execute"] = HarassHeroExecuteOverride
 behaviorLib.nCreepAggroUtility = 0
 behaviorLib.nRecentDamageMul = 0.20
 
-jungleLib.nStacking = 0 -- 0 = not 1 = waiting/attacking 2 = running away
+jungleLib.nStacking = 0 -- 0 = not, 1 = waiting/attacking 2, = running away
 jungleLib.nStackingCamp = 0
 
 jungleLib.currentMaxDifficulty = 70
@@ -521,6 +534,7 @@ end
 
 function jungleExecute(botBrain)
 	local unitSelf = core.unitSelf
+	local debugMode=false
 
 	local vecMyPos = unitSelf:GetPosition()
 	local vecTargetPos, nCamp = jungleLib.getNearestCampPos(vecMyPos, 0, jungleLib.currentMaxDifficulty)
@@ -532,7 +546,7 @@ function jungleExecute(botBrain)
 		end
 	end
 
-	core.DrawDebugArrow(vecMyPos, vecTargetPos, 'green')
+	if debugMode then core.DrawDebugArrow(vecMyPos, vecTargetPos, 'green') end
 
 	local nTargetDistanceSq = Vector3.Distance2DSq(vecMyPos, vecTargetPos)
 	if nTargetDistanceSq > (600 * 600) or jungleLib.nStacking ~= 0 then
@@ -558,9 +572,11 @@ function jungleExecute(botBrain)
 				-- Move away from the units in the camp
 				jungleLib.nStacking = 2
 				local vecAwayPos = jungleLib.jungleSpots[jungleLib.nStackingCamp].pos + (jungleLib.jungleSpots[jungleLib.nStackingCamp].outsidePos - jungleLib.jungleSpots[jungleLib.nStackingCamp].pos) * 5
-				core.DrawXPosition(jungleLib.jungleSpots[jungleLib.nStackingCamp].pos, 'red')
-				core.DrawXPosition(jungleLib.jungleSpots[jungleLib.nStackingCamp].outsidePos, 'red')
-				core.DrawDebugArrow(jungleLib.jungleSpots[jungleLib.nStackingCamp].pos,vecAwayPos, 'green')
+				if debugMode then
+					core.DrawXPosition(jungleLib.jungleSpots[jungleLib.nStackingCamp].pos, 'red')
+					core.DrawXPosition(jungleLib.jungleSpots[jungleLib.nStackingCamp].outsidePos, 'red')
+					core.DrawDebugArrow(jungleLib.jungleSpots[jungleLib.nStackingCamp].pos,vecAwayPos, 'green')
+				end
 
 				return core.OrderMoveToPosClamp(botBrain, core.unitSelf, vecAwayPos, false)
 			else
@@ -605,29 +621,37 @@ behaviorLib.jungleBehavior["Execute"] = jungleExecute
 behaviorLib.jungleBehavior["Name"] = "jungle"
 tinsert(behaviorLib.tBehaviors, behaviorLib.jungleBehavior)
 
--------------------------------
--- 		Behavior Changes	 --
--------------------------------
+----------------------------------------
+--          Behavior Changes          --
+----------------------------------------
 function zeroUtility(botBrain)
 	return 0
 end
+
 behaviorLib.PositionSelfBehavior["Utility"] = zeroUtility
 behaviorLib.PreGameBehavior["Utility"] = zeroUtility
 
-object.bupdatedItems=false
+----------------------------
+--          Shop          --
+----------------------------
+
+object.bupdatedItems = false
+
 function ShopUtilityOverride(botBrain)
-	if (not object.bupdatedItems)then--get items at beginning of game.
-		shopping.UpdateItemList(botBrain, true)--force update.
-		object.bupdatedItems=true
+	if not object.bupdatedItems then -- Get items at beginning of game.
+		shopping.UpdateItemList(botBrain, true) -- Force an update.
+		object.bupdatedItems = true
 	end
-	if HoN.GetRemainingPreMatchTime() and HoN.GetRemainingPreMatchTime()>60000 then
+	
+	if HoN.GetRemainingPreMatchTime() and HoN.GetRemainingPreMatchTime() > 60000 then
 		return 100
 	end
-    return object.ShopUtilityOld(botBrain)
+	
+	return object.ShopUtilityOld(botBrain)
 end
-object.ShopUtilityOld=behaviorLib.ShopBehavior["Utility"]
-behaviorLib.ShopBehavior["Utility"] = ShopUtilityOverride
 
+object.ShopUtilityOld = behaviorLib.ShopBehavior["Utility"]
+behaviorLib.ShopBehavior["Utility"] = ShopUtilityOverride
 
 -----------------------------------
 --          Custom Chat          --
