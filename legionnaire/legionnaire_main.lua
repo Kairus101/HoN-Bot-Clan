@@ -10,6 +10,18 @@
 ----------------------------------------------
 --       A HoN Community Bot Project        --
 ----------------------------------------------
+--              Created by:                 --
+----------------------------------------------
+--            kairus101 - Jungling          --
+--   Dark_Fire - Code cleanup/abilitys      --
+--  NoseNuggets - Bot base code and idea    --
+----------------------------------------------
+--            With thanks to                --
+----------------------------------------------
+--         Schnarchnase for courier         --
+--          fane_maciuca for ideas          --
+----------------------------------------------
+
 
 ------------------------------------------
 --          Bot Initialization          --
