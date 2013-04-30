@@ -94,7 +94,7 @@ object.heroName = 'Hero_Legionnaire'
 behaviorLib.StartingItems =
 	{"2 Item_IronBuckler", "Item_RunesOfTheBlight"}
 behaviorLib.LaneItems =
-	{"Item_Lifetube", "Item_Marchers", "Item_Shield2"} -- Shield2 is HotBL
+	{"Item_Lifetube", "Item_Marchers", "Item_Shield2", "Item_MysticVestments"} -- Shield2 is HotBL
 behaviorLib.MidItems =
 	{"Item_EnhancedMarchers", "Item_PortalKey"} 
 behaviorLib.LateItems =
