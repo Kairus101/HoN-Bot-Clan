@@ -65,6 +65,7 @@ runfile "bots/behaviorLib.lua"
 runfile "bots/advancedShopping.lua"
 local shopping = object.shoppingHandler
 shopping.Setup(true, true, false, false, false, false)
+shopping.PreGameWaiting=false
 
 runfile "bots/jungleLib.lua"
 local jungleLib = object.jungleLib
@@ -630,28 +631,6 @@ end
 
 behaviorLib.PositionSelfBehavior["Utility"] = zeroUtility
 behaviorLib.PreGameBehavior["Utility"] = zeroUtility
-
-----------------------------
---          Shop          --
-----------------------------
-
-object.bupdatedItems = false
-
-function ShopUtilityOverride(botBrain)
-	if not object.bupdatedItems then -- Get items at beginning of game.
-		shopping.UpdateItemList(botBrain, true) -- Force an update.
-		object.bupdatedItems = true
-	end
-	
-	if HoN.GetRemainingPreMatchTime() and HoN.GetRemainingPreMatchTime() > 60000 then
-		return 100
-	end
-	
-	return object.ShopUtilityOld(botBrain)
-end
-
-object.ShopUtilityOld = behaviorLib.ShopBehavior["Utility"]
-behaviorLib.ShopBehavior["Utility"] = ShopUtilityOverride
 
 -----------------------------------
 --          Custom Chat          --
