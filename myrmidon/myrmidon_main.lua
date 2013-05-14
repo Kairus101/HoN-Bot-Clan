@@ -191,14 +191,14 @@ core.FindItems = funcFindItemsOverride
 
 function object:onthinkOverride(tGameVariables)
 	self:onthinkOld(tGameVariables)
-	bDebugGadgets=true
+	local bDebugGadgets=true
 	
 	if (bDebugGadgets) then
 		local tUnits = HoN.GetUnitsInRadius(core.unitSelf:GetPosition(), 2000, core.UNIT_MASK_ALIVE + core.UNIT_MASK_GADGET)
 		if tUnits then
 			for _, unit in pairs(tUnits) do
 				core.DrawDebugArrow(core.unitSelf:GetPosition(), unit:GetPosition(), 'yellow') --flint q/r, fairy port, antipull, homecoming, kongor, chronos ult
-				BotEcho(unit:GetTypeName)
+				BotEcho(unit:GetTypeName())
 			end
 		end
 	end
