@@ -80,37 +80,51 @@ object.heroName = 'Hero_Hydromancer'
 
 -- Item buy order. internal names
 behaviorLib.StartingItems =
-	{"2 Item_IronBuckler", "Item_RunesOfTheBlight"}
+	{"Item_RunesOfTheBlight", "2 Item_MinorTotem", "Item_ManaBattery", "Item_HealthPotion"}
 behaviorLib.LaneItems =
-	{"Item_Lifetube", "Item_Marchers", "Item_Shield2", "Item_MysticVestments"} -- Shield2 is HotBL
+	{"Item_Steamboots", "Item_BloodChalice", "Item_Gloves3"} 
+	--chalice on a bot will be crazy. Just time it before each kill, as you would a taunt.
+	--Gloves3 is alchemists bones, faster attack speed + extra gold from jungle creeps. May as well impliment it as the first of it's type.
 behaviorLib.MidItems =
-	{"Item_EnhancedMarchers", "Item_PortalKey"} 
+	{"Item_Shield2", "Item_DaemonicBreastplate"} 
+	--shield2 is HotBL. This should be changed to shamans if a high ratio of recieved damage is magic. (is this possible.)
+	--I'm using a guide to set up these items, so, demonic.... maybe not.
 behaviorLib.LateItems =
-	{"Item_Excruciator", "Item_SolsBulwark", "Item_DaemonicBreastplate", "Item_BehemothsHeart", "Item_Freeze"} --Excruciator is Barbed Armor, Freeze is Frostwolf's Skull.
+	{"Item_SpellShards 3", "Item_Lightning2", "Item_HarkonsBlade", "Item_BehemothsHeart"}
+	--spellshards, because damage is important.
+	--"Lightning2 is charged hammer. More attack speed, right?
+	--harkons, solid all round.
+	--heart, because we need tankyness now.
+	
 
--- Skillbuild. 0 is Taunt, 1 is Charge, 2 is Whirling Blade, 3 is Execution, 4 is Attributes
+-- Skillbuild. 0 is Weed Field, 1 is Magic Carp, 2 is Wave Form, 3 is Forced Evolution, 4 is Attributes
 object.tSkills = {
-	2, 1, 2, 0, 2,
-	3, 2, 1, 1, 1,
-	3, 0, 0, 0, 4,
+	0, 2, 0, 1, 0,
+	3, 0, 1, 1, 2,
+	3, 1, 2, 2, 4,
 	3, 4, 4, 4, 4,
 	4, 4, 4, 4, 4
 }
 
 -- Bonus agression points if a skill/item is available for use
-
---object.nTauntUp = 7
+object.nWeedFieldUp = 7
+object.nMagicCarpUp = 7
+object.nWaveFormUp = 7
+object.nForcedEvolutionUp = 7
 
 -- Bonus agression points that are applied to the bot upon successfully using a skill/item
-
---object.nTauntUse = 13
+object.nWeedFieldUse = 7
+object.nMagicCarpUse = 7
+object.nWaveFormUse = 7
+object.nForcedEvolutionUse = 7
 
 -- Thresholds of aggression the bot must reach to use these abilities
-
---object.nTauntThreshold = 26
+object.nWeedFieldThreshold = 35
+object.nMagicCarpThreshold = 25
+object.nWaveFormThreshold = 45
+object.nForcedEvolutionThreshold = 40
 
 -- Other variables
-
 --object.nLastTauntTime = 0
 
 ------------------------------
@@ -121,11 +135,11 @@ function object:SkillBuild()
 	core.VerboseLog("SkillBuild()")
 
 	local unitSelf = self.core.unitSelf
-	if  skills.abilWhirlingBlade == nil then
-		skills.abilTaunt = unitSelf:GetAbility(0)
-		skills.abilCharge = unitSelf:GetAbility(1)
-		skills.abilWhirlingBlade = unitSelf:GetAbility(2)
-		skills.abilDecap = unitSelf:GetAbility(3)
+	if  skills.abilWeedField == nil then
+		skills.abilWeedField = unitSelf:GetAbility(0)
+		skills.abilMagicCarp = unitSelf:GetAbility(1)
+		skills.abilWaveForm = unitSelf:GetAbility(2)
+		skills.abilForcedEvolution = unitSelf:GetAbility(3)
 		skills.abilAttributeBoost = unitSelf:GetAbility(4)
 	end
 
@@ -177,6 +191,18 @@ core.FindItems = funcFindItemsOverride
 
 function object:onthinkOverride(tGameVariables)
 	self:onthinkOld(tGameVariables)
+	bDebugGadgets=true
+	
+	if (bDebugGadgets) then
+		local tUnits = HoN.GetUnitsInRadius(core.unitSelf:GetPosition(), 2000, core.UNIT_MASK_ALIVE + core.UNIT_MASK_GADGET)
+		if tUnits then
+			for _, unit in pairs(tUnits) do
+				core.DrawDebugArrow(core.unitSelf:GetPosition(), unit:GetPosition(), 'yellow') --flint q/r, fairy port, antipull, homecoming, kongor, chronos ult
+				BotEcho(unit:GetTypeName)
+			end
+		end
+	end
+	
 	--track carp here, if there is no gadget for it.
 end
 
@@ -193,8 +219,14 @@ function object:oncombateventOverride(EventData)
 	local nAddBonus = 0
 
 	if EventData.Type == "Ability" then
-		if EventData.InflictorName == "Ability_Legionnaire1" then
-			nAddBonus = nAddBonus + object.nTauntUse
+		if EventData.InflictorName == "Ability_Myrmidon1" then
+			nAddBonus = nAddBonus + object.nWeedFieldUse
+		end
+		if EventData.InflictorName == "Ability_Myrmidon2" then
+			nAddBonus = nAddBonus + object.nMagicCarpUse
+		end
+		if EventData.InflictorName == "Ability_Myrmidon3" then
+			nAddBonus = nAddBonus + object.nWaveFormUse
 		end
 	elseif EventData.Type == "Item" then
 		if core.itemPortalKey ~= nil and EventData.SourceUnit == core.unitSelf:GetUniqueID() and EventData.InflictorName == core.itemPortalKey:GetName() then
@@ -218,13 +250,25 @@ object.oncombatevent = object.oncombateventOverride
 local function CustomHarassUtilityFnOverride(hero)
 	local nUtility = 0
 	
-	if skills.abilTaunt:CanActivate() then
-		nUtility = nUtility + object.nTauntUp
+	if skills.abilWeedField:CanActivate() then
+		nUtility = nUtility + object.nWeedFieldUp
 	end
 	
-	if object.itemPortalKey and object.itemPortalKey:CanActivate() then
-		nUtility = nUtility + object.nPortalKeyUp
+	if skills.abilMagicCarp:CanActivate() then
+		nUtility = nUtility + object.nMagicCarpUp
 	end
+	
+	if skills.abilWaveForm:CanActivate() then
+		nUtility = nUtility + object.nWaveFormUp
+	end
+	
+	if skills.abilForcedEvolution:CanActivate() then
+		nUtility = nUtility + object.nForcedEvolutionUp
+	end
+	
+	--if object.itemPortalKey and object.itemPortalKey:CanActivate() then
+	--	nUtility = nUtility + object.nPortalKeyUp
+	--end
 	
 	return nUtility
 end
@@ -250,8 +294,24 @@ local function HarassHeroExecuteOverride(botBrain)
 
 	local bActionTaken = false
 
-	if not bActionTaken then
-		
+	--Weed Field
+	if not bActionTaken and skills.abilWeedField:CanActivate() and nLastHarassUtility>object.nWeedFieldThreshold then
+		bActionTaken = core.OrderAbilityPosition(botBrain, skills.abilWeedField, vecTargetPosition)
+	end
+	
+	--Magic Carp
+	if not bActionTaken and skills.abilMagicCarp:CanActivate() and nLastHarassUtility>object.nMagicCarpThreshold then
+		bActionTaken = core.OrderAbilityEntity(botBrain, skills.abilMagicCarp, unitTarget)
+	end
+	
+	--Wave Form
+	if not bActionTaken and skills.abilWaveForm:CanActivate() and nLastHarassUtility>object.nWaveFormThreshold then
+		bActionTaken = core.OrderAbilityPosition(botBrain, skills.abilWaveForm, vecTargetPosition)
+	end
+	
+	--ForcedEvolution
+	if not bActionTaken and skills.abilForcedEvolution:CanActivate() and nLastHarassUtility>object.nForcedEvolutionThreshold then
+		bActionTaken = core.OrderAbility(botBrain, skills.abilForcedEvolution)
 	end
 
 	return bActionTaken
