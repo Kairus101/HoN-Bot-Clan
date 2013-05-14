@@ -57,14 +57,6 @@ runfile "bots/eventsLib.lua"
 runfile "bots/metadata.lua"
 runfile "bots/behaviorLib.lua"
 
-runfile "bots/advancedShopping.lua"
-local shopping = object.shoppingHandler
-shopping.Setup(true, true, false, false, false, false)
-shopping.PreGameWaiting=false
-
-runfile "bots/jungleLib.lua"
-local jungleLib = object.jungleLib
-
 local core, eventsLib, behaviorLib, metadata, skills = object.core, object.eventsLib, object.behaviorLib, object.metadata, object.skills
 
 local print, ipairs, pairs, string, table, next, type, tinsert, tremove, tsort, format, tostring, tonumber, strfind, strsub
