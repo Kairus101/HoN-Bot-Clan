@@ -17,6 +17,8 @@
 --                 Kairus101                --
 ----------------------------------------------
 
+--This is a test by VHD to see if he is intelligent enough to commit to a repo correctly...
+
 ------------------------------------------
 --          Bot Initialization          --
 ------------------------------------------
