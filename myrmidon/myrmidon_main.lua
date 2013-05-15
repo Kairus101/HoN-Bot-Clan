@@ -243,22 +243,27 @@ function object:onthinkOverride(tGameVariables)
 			end
 		end
 	end
+
 	-- Toggle Steamboots for more Health/Mana
 	local itemSteamboots = core.itemSteamboots
 	if itemSteamboots and itemSteamboots:CanActivate() then
 		local unitSelf = core.unitSelf
 		local sKey = itemSteamboots:GetActiveModifierKey()
+		local sCurrentBehavior = core.GetCurrentBehaviorName(self)
 		if sKey == "str" then
 			-- Toggle away from STR if health is high enough
-			if unitSelf:GetHealthPercent() > .65 then
+			if unitSelf:GetHealthPercent() > .65 or sCurrentBehavior == "UseHealthRegen" or sCurrentBehavior == "UseManaRegen" then
 				self:OrderItem(itemSteamboots.object, false)
 			end
 		elseif sKey == "agi" then
-			-- Always toggle past AGI
-			self:OrderItem(itemSteamboots.object, false)
+			-- Toggle away from AGI when we're not using Regen items
+			
+			if sCurrentBehavior ~= "UseHealthRegen" and sCurrentBehavior ~= "UseManaRegen" and not unitSelf:HasState("State_RunesOfTheBlight") and not unitSelf:HasState("State_HealthPotion") then
+				self:OrderItem(itemSteamboots.object, false)
+			end
 		elseif sKey == "int" then
 			-- Toggle away from INT if health gets too low
-			if unitSelf:GetHealthPercent() < .45 then
+			if unitSelf:GetHealthPercent() < .45 or sCurrentBehavior == "UseHealthRegen" or sCurrentBehavior == "UseManaRegen" then
 				self:OrderItem(itemSteamboots.object, false)
 			end
 		end
@@ -380,7 +385,7 @@ local function HarassHeroExecuteOverride(botBrain)
 	--ForcedEvolution
 	if not bActionTaken then
 		local abilForcedEvolution = skills.abilForcedEvolution
-		if abilForcedEvolution:CanActivate() and nLastHarassUtility>object.nForcedEvolutionThreshold then
+		if abilForcedEvolution:CanActivate() and nLastHarassUtility > object.nForcedEvolutionThreshold then
 			bActionTaken = core.OrderAbility(botBrain, skills.abilForcedEvolution)
 		end
 	end
@@ -490,15 +495,7 @@ local function UseHealthRegenUtilityOverride(botBrain)
 
 	StartProfile("Mana Battery/Power Supply")
 	if behaviorLib.bUseBatterySupplyForHealth then
-		local itemManaBattery = core.itemManaBattery
-		local itemPowerSupply = core.itemPowerSupply
-		local itemBatterySupply = nil
-		if itemManaBattery then
-			itemBatterySupply = itemManaBattery
-		elseif itemPowerSupply then
-			itemBatterySupply = itemPowerSupply
-		end
-
+		local itemBatterySupply = core.itemManaBattery or core.itemPowerSupply
 		if itemBatterySupply and itemBatterySupply:CanActivate() then
 			local nCharges = itemBatterySupply:GetCharges()
 			if nCharges > 0 then
@@ -559,6 +556,15 @@ local function UseHealthRegenExecuteOverride(botBrain)
 	local tInventory = unitSelf:GetInventory()
 	local nMaxUtility = max(behaviorLib.nBatterySupplyHealthUtility, behaviorLib.nBlightsUtility, behaviorLib.nHealthPotUtility)
 
+	-- Wait for Steamboots toggling
+	if not bActionTaken then
+		local itemSteamboots = core.itemSteamboots
+		if itemSteamboots and itemSteamboots:GetActiveModifierKey() ~= "agi" then
+			-- Stall the function
+			return true
+		end
+	end
+
 	-- Use Runes to heal
 	if not bActionTaken and behaviorLib.nBlightsUtility == nMaxUtility then
 		local tBlights = core.InventoryContains(tInventory, "Item_RunesOfTheBlight")
@@ -611,15 +617,7 @@ local function UseHealthRegenExecuteOverride(botBrain)
 
 	-- Use Mana Battery/Power Supply to heal
 	if not bActionTaken and behaviorLib.nBatterySupplyHealthUtility == nMaxUtility then
-		local itemManaBattery = core.itemManaBattery
-		local itemPowerSupply = core.itemPowerSupply
-		local itemBatterySupply = nil
-		if itemManaBattery then
-			itemBatterySupply = itemManaBattery
-		elseif itemPowerSupply then
-			itemBatterySupply = itemPowerSupply
-		end
-
+		local itemBatterySupply = core.itemManaBattery or core.itemPowerSupply
 		if itemBatterySupply and itemBatterySupply:CanActivate() and itemBatterySupply:GetCharges() > 0 then
 			bActionTaken = core.OrderItemClamp(botBrain, unitSelf, itemBatterySupply)
 		end
@@ -680,15 +678,7 @@ function behaviorLib.UseManaRegenUtility(botBrain)
 
 	StartProfile("Mana Battery/Power Supply")
 	if behaviorLib.bUseBatterySupplyForMana then
-		local itemManaBattery = core.itemManaBattery
-		local itemPowerSupply = core.itemPowerSupply
-		local itemBatterySupply = nil
-		if itemManaBattery then
-			itemBatterySupply = itemManaBattery
-		elseif itemPowerSupply then
-			itemBatterySupply = itemPowerSupply
-		end
-
+		local itemBatterySupply = core.itemManaBattery or core.itemPowerSupply
 		if itemBatterySupply and itemBatterySupply:CanActivate() then
 			local nCharges = itemBatterySupply:GetCharges()
 			if nCharges > 0 then
@@ -718,11 +708,19 @@ function behaviorLib.UseManaRegenExecute(botBrain)
 	local vecSelfPos = unitSelf:GetPosition()
 	local tInventory = unitSelf:GetInventory()
 	local nMaxUtility = max(behaviorLib.nBatterySupplyManaUtility)
+	
+	-- Wait for Steamboots toggling
+	if not bActionTaken then
+		local itemSteamboots = core.itemSteamboots
+		if itemSteamboots and itemSteamboots:GetActiveModifierKey() ~= "agi" then
+			-- Stall the function
+			return true
+		end
+	end
 
 	-- Use Mana Battery/Power Supply to regen mana
 	if not bActionTaken and behaviorLib.nBatterySupplyManaUtility == nMaxUtility then
 		local itemBatterySupply = core.itemManaBattery or core.itemPowerSupply
-
 		if itemBatterySupply and itemBatterySupply:CanActivate() and itemBatterySupply:GetCharges() > 0 then
 			bActionTaken = core.OrderItemClamp(botBrain, unitSelf, itemBatterySupply)
 		end
