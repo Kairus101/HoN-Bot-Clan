@@ -14,6 +14,37 @@
 --       DarkFire       VHD       Kairus101      --
 ---------------------------------------------------
 
+--Proposed TO-DO list (please add/edit/delete as appropriate, guys!)
+--	Items:
+--		Refine item choices
+--  		Need to decide on gank/support/tank/nuke build (or variable build?)
+--			I propose adding Lex Talionis after red boots and chalice. Provides magic armor and nice damage amp to burst skills
+--			Consider adding grimoire/lightbrand for boosted magic dmg?  Maybe insanitarious for stronger attacks in ult form?
+--			Add BKB for late game so we can fight in ult form up close without getting stunned/nuked?
+--		Chalice, use whenever we have > 80%(?) hp but < 60%(?) mana.  (and when target is about to die, as suggested!)
+
+--  Retreat behavior
+--		Ult if about to die (for +hp)
+--		Waveform away (pick node nearest max range wave form away from threat).
+--			Can we detect incoming damage sources before they hit (MOA nuke, hammer stun, ellonia ult) and wave away?
+--		Weed/carp to slow down persuer?
+
+--  Harass behavior
+--		Weed:
+--			If carp active, track target and carp locations.  Estimate intercept and cast weed field so that it triggers at time/location of carp intercept
+--			If carp not active, calculate predicted target position based on target move speed, location, last known location and cast weed appropriately
+--		Carp:
+--			Cast on targets out of attack range that have HP pot on
+--		Wave:
+--			For far off targets with low hp, use to close distance in order to get nukes off?
+--			For close targets, use in a way to pass through enemy target (to slow target)
+--		Ult:
+--			Turn on when target is slow/immobalized and we are in close/melee range?
+
+--  Other
+--		Find a way to use mana pots effectively early game?
+--		Use Weed on most creeps possible when PushBehavior is active (and no enemy heroes nearby)? 
+
 ------------------------------------------
 --          Bot Initialization          --
 ------------------------------------------
