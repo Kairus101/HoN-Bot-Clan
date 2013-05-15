@@ -104,16 +104,16 @@ object.tSkills = {
 }
 
 -- Bonus agression points if a skill/item is available for use
-object.nWeedFieldUp = 7
-object.nMagicCarpUp = 7
-object.nWaveFormUp = 7
-object.nForcedEvolutionUp = 7
+object.nWeedFieldUp = 5
+object.nMagicCarpUp = 3
+object.nWaveFormUp = 2
+object.nForcedEvolutionUp = 4
 
 -- Bonus agression points that are applied to the bot upon successfully using a skill/item
-object.nWeedFieldUse = 7
-object.nMagicCarpUse = 7
-object.nWaveFormUse = 7
-object.nForcedEvolutionUse = 7
+object.nWeedFieldUse = 4
+object.nMagicCarpUse = 4
+object.nWaveFormUse = 2
+object.nForcedEvolutionUse = 20
 
 -- Thresholds of aggression the bot must reach to use these abilities
 object.nWeedFieldThreshold = 45
@@ -211,7 +211,7 @@ local uCarpTarget
 
 function object:onthinkOverride(tGameVariables)
 	self:onthinkOld(tGameVariables)
-	local bDebugGadgets=false
+	local bDebugGadgets=true
 	local unitSelf=core.unitSelf
 	
 	if (bDebugGadgets or bTrackingCarp) then
@@ -224,7 +224,7 @@ function object:onthinkOverride(tGameVariables)
 				--Carp gadget is "Gadget_Hydromancer_Ability2_Reveal", and it is at the position of the carp itself.
 				if (bTrackingCarp and unit:GetTypeName()=="Gadget_Hydromancer_Ability2_Reveal") then--carp is alive
 					if (uCarpTarget and uCarpTarget:GetPosition()) then
-						BotEcho("Time till carp hit: "..Vector3.Distance2DSq(unit:GetPosition(),uCarpTarget:GetPosition() ).. "/"..(600*600).." = " ..Vector3.Distance2DSq(unitSelf:GetPosition(),uCarpTarget:GetPosition() )/(600*600))
+						BotEcho("Time till carp hit: "..Vector3.Distance2DSq(unit:GetPosition(),uCarpTarget:GetPosition() )/(600*600))
 					end
 				end
 				
@@ -1036,6 +1036,34 @@ end
 
 object.RetreatFromThreatExecuteOld = behaviorLib.RetreatFromThreatExecute
 behaviorLib.RetreatFromThreatBehavior["Execute"] = funcRetreatFromThreatExecuteOverride
+
+local function positionOffset(pos, angle, distance) --this is used by minions to form a ring around people.
+	tmp = Vector3.Create(cos(angle)*distance,sin(angle)*distance)
+	return tmp+pos
+end
+----------------------------------------------------
+--             Heal At Well Override              --
+----------------------------------------------------
+--return to well more often. --2000 gold adds 8 to return utility, 0% mana also adds 8.
+--When returning to well, use skills and items.
+local function HealAtWellUtilityOverride(botBrain)
+	if (Vector3.Distance2DSq(core.unitSelf:GetPosition(), core.allyWell and core.allyWell:GetPosition() or behaviorLib.PositionSelfBackUp())<400*400 and core.unitSelf:GetManaPercent()*100<95) then return 80 end
+	return object.HealAtWellUtilityOld(botBrain)*1.75+(botBrain:GetGold()*8/2000)+ 8-(core.unitSelf:GetManaPercent()*8) --couragously flee back to base.
+end
+local function HealAtWellExecuteOverride(botBrain)
+	local vecWellPos = core.allyWell and core.allyWell:GetPosition() or behaviorLib.PositionSelfBackUp()
+	local vecMyPos=core.unitSelf:GetPosition()
+	if (Vector3.Distance2DSq(vecMyPos, vecWellPos)>600*600)then
+		if (skills.abilWaveForm:CanActivate()) then --waveform
+			core.OrderAbilityPosition(botBrain, skills.abilWaveForm, positionOffset(core.unitSelf:GetPosition(), atan2(vecWellPos.y-vecMyPos.y,vecWellPos.x-vecMyPos.x), skills.abilWaveForm:GetRange()))
+		end
+	end
+	return object.HealAtWellExecuteOld(botBrain)
+end
+object.HealAtWellUtilityOld = behaviorLib.HealAtWellBehavior["Utility"]
+object.HealAtWellExecuteOld = behaviorLib.HealAtWellBehavior["Execute"]
+behaviorLib.HealAtWellBehavior["Utility"] = HealAtWellUtilityOverride
+behaviorLib.HealAtWellBehavior["Execute"] = HealAtWellExecuteOverride
 
 -----------------------------------
 --          Custom Chat          --
