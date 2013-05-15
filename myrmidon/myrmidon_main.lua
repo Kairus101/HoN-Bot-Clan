@@ -217,6 +217,33 @@ function object:onthinkOverride(tGameVariables)
 	end
 	
 	--track carp here, if there is no gadget for it.
+	
+	
+	
+	
+	
+	
+	
+	-- Toggle Steamboots for more Health/Mana
+	local itemSteamboots = core.itemSteamboots
+	if itemSteamboots and itemSteamboots:CanActivate() then
+		local unitSelf = core.unitSelf
+		local sKey = itemSteamboots:GetActiveModifierKey()
+		if sKey == "str" then
+			-- Toggle away from STR if health is high enough
+			if unitSelf:GetHealthPercent() > .65 then
+				self:OrderItem(itemSteamboots.object, false)
+			end
+		elseif sKey == "agi" then
+			-- Always toggle past AGI
+			self:OrderItem(itemSteamboots.object, false)
+		elseif sKey == "int" then
+			-- Toggle away from INT if health gets too low
+			if unitSelf:GetHealthPercent() < .45 then
+				self:OrderItem(itemSteamboots.object, false)
+			end
+		end
+	end
 end
 
 object.onthinkOld = object.onthink
@@ -339,17 +366,9 @@ end
 object.harassExecuteOld = behaviorLib.HarassHeroBehavior["Execute"]
 behaviorLib.HarassHeroBehavior["Execute"] = HarassHeroExecuteOverride
 
---------------------------------------
---          UseHealthRegen          --
---------------------------------------
---
--- Utility: 0 to 40
--- Based on missing health
---
--- Execute: 
--- Use a Rune of the Blight, Health Pot, or Bottle to heal
--- Will only use Health Pot or Bottle if it is safe
---
+-----------------------------------------------
+--          UseHealthRegen Override          --
+-----------------------------------------------
 
 -------- Global Constants & Variables --------
 behaviorLib.nBatterySupplyHealthUtility = 0
