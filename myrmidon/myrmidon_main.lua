@@ -54,6 +54,9 @@ runfile "bots/eventsLib.lua"
 runfile "bots/metadata.lua"
 runfile "bots/behaviorLib.lua"
 
+runfile "bots/jungleLib.lua"
+local jungleLib = object.jungleLib
+
 local core, eventsLib, behaviorLib, metadata, skills = object.core, object.eventsLib, object.behaviorLib, object.metadata, object.skills
 
 local print, ipairs, pairs, string, table, next, type, tinsert, tremove, tsort, format, tostring, tonumber, strfind, strsub
@@ -211,7 +214,8 @@ local uCarpTarget
 
 function object:onthinkOverride(tGameVariables)
 	self:onthinkOld(tGameVariables)
-	local bDebugGadgets=true
+	jungleLib.assess(self)
+	local bDebugGadgets=false
 	local unitSelf=core.unitSelf
 	
 	if (bDebugGadgets or bTrackingCarp) then
@@ -224,7 +228,7 @@ function object:onthinkOverride(tGameVariables)
 				--Carp gadget is "Gadget_Hydromancer_Ability2_Reveal", and it is at the position of the carp itself.
 				if (bTrackingCarp and unit:GetTypeName()=="Gadget_Hydromancer_Ability2_Reveal") then--carp is alive
 					if (uCarpTarget and uCarpTarget:GetPosition()) then
-						BotEcho("Time till carp hit: "..Vector3.Distance2DSq(unit:GetPosition(),uCarpTarget:GetPosition() )/(600*600))
+						--BotEcho("Time till carp hit: "..Vector3.Distance2DSq(unit:GetPosition(),uCarpTarget:GetPosition() )/(600*600))
 					end
 				end
 				
@@ -342,7 +346,6 @@ local function HarassHeroExecuteOverride(botBrain)
 	local nLastHarassUtility = behaviorLib.lastHarassUtil
 	local bActionTaken = false
 	if ( unitTarget:GetHealthPercent() <= .15) then
-		BotEcho("I'm using!")
 		botBrain:OrderItem(core.itemBloodChalice.object or core.itemBloodChalice, false)
 	end
 	
@@ -718,14 +721,7 @@ function behaviorLib.UseManaRegenExecute(botBrain)
 
 	-- Use Mana Battery/Power Supply to regen mana
 	if not bActionTaken and behaviorLib.nBatterySupplyManaUtility == nMaxUtility then
-		local itemManaBattery = core.itemManaBattery
-		local itemPowerSupply = core.itemPowerSupply
-		local itemBatterySupply = nil
-		if itemManaBattery then
-			itemBatterySupply = itemManaBattery
-		elseif itemPowerSupply then
-			itemBatterySupply = itemPowerSupply
-		end
+		local itemBatterySupply = core.itemManaBattery or core.itemPowerSupply
 
 		if itemBatterySupply and itemBatterySupply:CanActivate() and itemBatterySupply:GetCharges() > 0 then
 			bActionTaken = core.OrderItemClamp(botBrain, unitSelf, itemBatterySupply)
@@ -1068,6 +1064,32 @@ object.HealAtWellUtilityOld = behaviorLib.HealAtWellBehavior["Utility"]
 object.HealAtWellExecuteOld = behaviorLib.HealAtWellBehavior["Execute"]
 behaviorLib.HealAtWellBehavior["Utility"] = HealAtWellUtilityOverride
 behaviorLib.HealAtWellBehavior["Execute"] = HealAtWellExecuteOverride
+
+--[[
+----------------------------------------------------
+--                Alchemists bones                --
+----------------------------------------------------
+--When near a camp, check it to use alchemists bones on it
+local function AlchemistsBonesUtility(botBrain)
+	if (not core.itemAlchBones or core.itemAlchBones:GetCharges()==0) return 0 end
+	vecNearestHardCamp=jungleLib.getNearestCampPos(vecMyPos, 90, 200)
+	
+	if (Vector3.Distance2DSq(core.unitSelf:GetPosition(), core.allyWell and core.allyWell:GetPosition() or behaviorLib.PositionSelfBackUp())<400*400 and core.unitSelf:GetManaPercent()*100<95) then return 80 end
+	return object.HealAtWellUtilityOld(botBrain)*1.75+(botBrain:GetGold()*8/2000)+ 8-(core.unitSelf:GetManaPercent()*8) --couragously flee back to base.
+end
+local function AlchemistsBonesExecute(botBrain)
+	local vecWellPos = core.allyWell and core.allyWell:GetPosition() or behaviorLib.PositionSelfBackUp()
+	local vecMyPos=core.unitSelf:GetPosition()
+	if (Vector3.Distance2DSq(vecMyPos, vecWellPos)>600*600)then
+		if (skills.abilWaveForm:CanActivate()) then --waveform
+			return core.OrderAbilityPosition(botBrain, skills.abilWaveForm, positionOffset(core.unitSelf:GetPosition(), atan2(vecWellPos.y-vecMyPos.y,vecWellPos.x-vecMyPos.x), skills.abilWaveForm:GetRange()-100))
+		end
+	end
+	return object.HealAtWellExecuteOld(botBrain)
+end
+behaviorLib.HealAtWellBehavior["Utility"] = AlchemistsBonesUtility
+behaviorLib.HealAtWellBehavior["Execute"] = AlchemistsBonesExecute
+]]
 
 -----------------------------------
 --          Custom Chat          --
