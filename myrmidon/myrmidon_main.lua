@@ -93,6 +93,7 @@ behaviorLib.LateItems =
 	--harkons, solid all round.
 	--heart, because we need tankyness now.
 
+
 -- Skillbuild. 0 is Weed Field, 1 is Magic Carp, 2 is Wave Form, 3 is Forced Evolution, 4 is Attributes
 object.tSkills = {
 	0, 2, 0, 1, 0,
@@ -117,7 +118,7 @@ object.nForcedEvolutionUse = 7
 -- Thresholds of aggression the bot must reach to use these abilities
 object.nWeedFieldThreshold = 35
 object.nMagicCarpThreshold = 25
-object.nWaveFormThreshold = 45
+object.nWaveFormThreshold = 85
 object.nForcedEvolutionThreshold = 40
 
 -- Other variables
@@ -202,28 +203,39 @@ core.FindItems = funcFindItemsOverride
 --          OnThink Override          --
 ----------------------------------------
 
+local btrackingCarp=false
+local uCarpTarget
+
 function object:onthinkOverride(tGameVariables)
 	self:onthinkOld(tGameVariables)
-	local bDebugGadgets=true
+	local bDebugGadgets=false
+	local unitSelf=core.unitSelf
 	
-	if (bDebugGadgets) then
-		local tUnits = HoN.GetUnitsInRadius(core.unitSelf:GetPosition(), 2000, core.UNIT_MASK_ALIVE + core.UNIT_MASK_GADGET)
+	if (bDebugGadgets or btrackingCarp) then
+		local tUnits = HoN.GetUnitsInRadius(unitSelf:GetPosition(), 2000, core.UNIT_MASK_ALIVE + core.UNIT_MASK_GADGET)
 		if tUnits then
 			for _, unit in pairs(tUnits) do
-				core.DrawDebugArrow(core.unitSelf:GetPosition(), unit:GetPosition(), 'yellow') --flint q/r, fairy port, antipull, homecoming, kongor, chronos ult
-				BotEcho(unit:GetTypeName())
+			
+				-- CARP
+				--Carp speed is 600.
+				--Carp gadget is "Gadget_Hydromancer_Ability2_Reveal", and it is at the position of the carp itself.
+				if (btrackingCarp and unit:GetTypeName()=="Gadget_Hydromancer_Ability2_Reveal") then--carp is alive
+					if (uCarpTarget and uCarpTarget:GetPosition()) then
+						BotEcho("Time till carp hit: "+Vector3.Distance2DSq(unitSelf:GetPosition(),uCarpTarget:GetPosition() )/(600*600))
+					end
+				end
+				
+				if (btrackingCarp and unit:GetTypeName()=="Gadget_Hydromancer_Ability2_Reveal_Linger") then -- carp is now dead
+					btrackingCarp=false
+				end
+				
+				if (bDebugGadgets) then
+					core.DrawDebugArrow(unitSelf:GetPosition(), unit:GetPosition(), 'yellow') --flint q/r, fairy port, antipull, homecoming, kongor, chronos ult
+					BotEcho(unit:GetTypeName())
+				end
 			end
 		end
 	end
-	
-	--track carp here, if there is no gadget for it.
-	
-	
-	
-	
-	
-	
-	
 	-- Toggle Steamboots for more Health/Mana
 	local itemSteamboots = core.itemSteamboots
 	if itemSteamboots and itemSteamboots:CanActivate() then
@@ -245,7 +257,6 @@ function object:onthinkOverride(tGameVariables)
 		end
 	end
 end
-
 object.onthinkOld = object.onthink
 object.onthink = object.onthinkOverride
 
@@ -341,6 +352,10 @@ local function HarassHeroExecuteOverride(botBrain)
 		local abilMagicCarp = skills.abilMagicCarp
 		if abilMagicCarp:CanActivate() and bCanSeeTarget and nLastHarassUtility > object.nMagicCarpThreshold then
 			bActionTaken = core.OrderAbilityEntity(botBrain, skills.abilMagicCarp, unitTarget)
+			if (bActionTaken) then
+				uCarpTarget=unitTarget
+				bTrackingCarp=true
+			end
 		end
 	end
 	
@@ -714,6 +729,149 @@ behaviorLib.UseManaRegenBehavior["Utility"] = behaviorLib.UseManaRegenUtility
 behaviorLib.UseManaRegenBehavior["Execute"] = behaviorLib.UseManaRegenExecute
 behaviorLib.UseManaRegenBehavior["Name"] = "UseManaRegen"
 tinsert(behaviorLib.tBehaviors, behaviorLib.UseManaRegenBehavior)
+
+--------------------------------------------------
+--    SoulReapers's Predictive Last Hitting Helper
+--    
+--    Assumes that you have vision on the creep
+--    passed in to the function
+--
+--    Developed by paradox870
+--------------------------------------------------
+local function GetAttackDamageOnCreep(botBrain, unitCreepTarget)
+
+	if not unitCreepTarget or not core.CanSeeUnit(botBrain, unitCreepTarget) then
+		return nil
+	end
+
+	local unitSelf = core.unitSelf
+
+	--Get positioning information
+	local vecSelfPos = unitSelf:GetPosition()
+	local vecTargetPos = unitCreepTarget:GetPosition() 
+
+	--Get projectile info
+	local nProjectileSpeed = unitSelf:GetAttackProjectileSpeed() 
+	local nProjectileTravelTime = Vector3.Distance2D(vecSelfPos, vecTargetPos) / nProjectileSpeed
+	if bDebugEchos then BotEcho ("Projectile travel time: " .. nProjectileTravelTime ) end 
+	
+	local nExpectedCreepDamage = 0
+	local nExpectedTowerDamage = 0
+	local tNearbyAttackingCreeps = nil
+	local tNearbyAttackingTowers = nil
+
+	--Get the creeps and towers on the opposite team
+	-- of our target
+	if unitCreepTarget:GetTeam() == unitSelf:GetTeam() then
+		tNearbyAttackingCreeps = core.localUnits['EnemyCreeps']
+		tNearbyAttackingTowers = core.localUnits['EnemyTowers']
+	else
+		tNearbyAttackingCreeps = core.localUnits['AllyCreeps']
+		tNearbyAttackingTowers = core.localUnits['AllyTowers']
+	end
+
+	--Determine the damage expected on the creep by other creeps
+	for i, unitCreep in pairs(tNearbyAttackingCreeps) do
+		if unitCreep:GetAttackTarget() == unitCreepTarget then
+			local nCreepAttacks = 1 + math.floor(unitCreep:GetAttackSpeed() * nProjectileTravelTime)
+			nExpectedCreepDamage = nExpectedCreepDamage + unitCreep:GetFinalAttackDamageMin() * nCreepAttacks
+		end
+	end
+
+	--Determine the damage expected on the creep by other towers
+	for i, unitTower in pairs(tNearbyAttackingTowers) do
+		if unitTower:GetAttackTarget() == unitCreepTarget then
+			local nTowerAttacks = 1 + math.floor(unitTower:GetAttackSpeed() * nProjectileTravelTime)
+			nExpectedTowerDamage = nExpectedTowerDamage + unitTower:GetFinalAttackDamageMin() * nTowerAttacks
+		end
+	end
+
+	return nExpectedCreepDamage + nExpectedTowerDamage
+end
+
+function GetCreepAttackTargetOverride(botBrain, unitEnemyCreep, unitAllyCreep) --called pretty much constantly
+	local bDebugEchos = false
+
+	--Get info about self
+	local unitSelf = core.unitSelf
+	local nDamageMin = unitSelf:GetFinalAttackDamageMin()
+
+	if unitEnemyCreep and core.CanSeeUnit(botBrain, unitEnemyCreep) then
+		local nTargetHealth = unitEnemyCreep:GetHealth()
+		--Only attack if, by the time our attack reaches the target
+		-- the damage done by other sources brings the target's health
+		-- below our minimum damage
+		if nDamageMin >= (nTargetHealth - GetAttackDamageOnCreep(botBrain, unitEnemyCreep)) then
+			if bDebugEchos then BotEcho("Returning an enemy") end
+			return unitEnemyCreep
+		end
+	end
+
+	if unitAllyCreep then
+		local nTargetHealth = unitAllyCreep:GetHealth()
+
+		--Only attack if, by the time our attack reaches the target
+		-- the damage done by other sources brings the target's health
+		-- below our minimum damage
+		if nDamageMin >= (nTargetHealth - GetAttackDamageOnCreep(botBrain, unitAllyCreep)) then
+			local bActuallyDeny = true
+			
+			--[Difficulty: Easy] Don't deny
+			if core.nDifficulty == core.nEASY_DIFFICULTY then
+				bActuallyDeny = false
+			end         
+			
+			-- [Tutorial] Hellbourne *will* deny creeps after shit gets real
+			if core.bIsTutorial and core.bTutorialBehaviorReset == true and core.myTeam == HoN.GetHellbourneTeam() then
+				bActuallyDeny = true
+			end
+			
+			if bActuallyDeny then
+				if bDebugEchos then BotEcho("Returning an ally") end
+				return unitAllyCreep
+			end
+		end
+	end
+
+	return nil
+end
+-- overload the behaviour stock function with custom 
+object.getCreepAttackTargetOld = behaviorLib.GetCreepAttackTarget
+behaviorLib.GetCreepAttackTarget = GetCreepAttackTargetOverride
+
+function AttackCreepsExecuteOverride(botBrain)
+	local unitSelf = core.unitSelf
+	local unitCreepTarget = core.unitCreepTarget
+
+	if unitCreepTarget and core.CanSeeUnit(botBrain, unitCreepTarget) then      
+		--Get info about the target we are about to attack
+		local vecSelfPos = unitSelf:GetPosition()
+		local vecTargetPos = unitCreepTarget:GetPosition()
+		local nDistSq = Vector3.Distance2DSq(vecSelfPos, vecTargetPos)
+		local nAttackRangeSq = core.GetAbsoluteAttackRangeToUnit(unitSelf, currentTarget, true)
+	
+		--Only attack if, by the time our attack reaches the target
+		-- the damage done by other sources brings the target's health
+		-- below our minimum damage, and we are in range and can attack right now
+		if nDistSq < nAttackRangeSq and unitSelf:IsAttackReady() then
+			core.OrderAttackClamp(botBrain, unitSelf, unitCreepTarget)
+
+		--Otherwise get within 70% of attack range if not already
+		-- This will decrease travel time for the projectile
+		elseif (nDistSq > nAttackRangeSq * 0.5) then 
+			local vecDesiredPos = core.AdjustMovementForTowerLogic(vecTargetPos)
+			core.OrderMoveToPosClamp(botBrain, unitSelf, vecDesiredPos, false)
+
+		--If within a good range, just hold tight
+		else
+			core.OrderHoldClamp(botBrain, unitSelf, false)
+		end
+	else
+		return false
+	end
+end
+object.AttackCreepsExecuteOld = behaviorLib.HarassHeroBehavior["Execute"]
+behaviorLib.AttackCreepsBehavior["Execute"] = AttackCreepsExecuteOverride
 
 -----------------------------------
 --          Custom Chat          --
