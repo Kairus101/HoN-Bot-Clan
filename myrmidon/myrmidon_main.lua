@@ -341,11 +341,15 @@ local function HarassHeroExecuteOverride(botBrain)
 	
 	local nLastHarassUtility = behaviorLib.lastHarassUtil
 	local bActionTaken = false
-
+	if ( unitTarget:GetHealthPercent() <= .15) then
+		BotEcho("I'm using!")
+		botBrain:OrderItem(core.itemBloodChalice.object or core.itemBloodChalice, false)
+	end
+	
 	--Weed Field
 	if not bActionTaken then
 		local abilWeedField = skills.abilWeedField
-		if abilWeedField:CanActivate() and nLastHarassUtility > object.nWeedFieldThreshold then
+		if abilWeedField:CanActivate() and nLastHarassUtility > object.nWeedFieldThreshold and nTargetDistanceSq<(skills.abilWaveForm:GetRange()-100)*(skills.abilWaveForm:GetRange()-100) then
 			bActionTaken = core.OrderAbilityPosition(botBrain, skills.abilWeedField, vecTargetPosition)
 		end
 	end
@@ -852,7 +856,7 @@ function AttackCreepsExecuteOverride(botBrain)
 	local unitSelf = core.unitSelf
 	local unitCreepTarget = core.unitCreepTarget
 
-	if unitCreepTarget and core.CanSeeUnit(botBrain, unitCreepTarget) then      
+	if (unitSelf:GetAttackType() ~= "melee") and unitCreepTarget and core.CanSeeUnit(botBrain, unitCreepTarget) then      
 		--Get info about the target we are about to attack
 		local vecSelfPos = unitSelf:GetPosition()
 		local vecTargetPos = unitCreepTarget:GetPosition()
@@ -863,20 +867,20 @@ function AttackCreepsExecuteOverride(botBrain)
 		-- the damage done by other sources brings the target's health
 		-- below our minimum damage, and we are in range and can attack right now
 		if nDistSq < nAttackRangeSq and unitSelf:IsAttackReady() then
-			core.OrderAttackClamp(botBrain, unitSelf, unitCreepTarget)
+			return core.OrderAttackClamp(botBrain, unitSelf, unitCreepTarget)
 
 		--Otherwise get within 70% of attack range if not already
 		-- This will decrease travel time for the projectile
 		elseif (nDistSq > nAttackRangeSq * 0.5) then 
 			local vecDesiredPos = core.AdjustMovementForTowerLogic(vecTargetPos)
-			core.OrderMoveToPosClamp(botBrain, unitSelf, vecDesiredPos, false)
+			return core.OrderMoveToPosClamp(botBrain, unitSelf, vecDesiredPos, false)
 
 		--If within a good range, just hold tight
 		else
-			core.OrderHoldClamp(botBrain, unitSelf, false)
+			return core.OrderHoldClamp(botBrain, unitSelf, false)
 		end
 	else
-		return false
+		return object.AttackCreepsExecuteOld
 	end
 end
 object.AttackCreepsExecuteOld = behaviorLib.HarassHeroBehavior["Execute"]
@@ -1055,7 +1059,7 @@ local function HealAtWellExecuteOverride(botBrain)
 	local vecMyPos=core.unitSelf:GetPosition()
 	if (Vector3.Distance2DSq(vecMyPos, vecWellPos)>600*600)then
 		if (skills.abilWaveForm:CanActivate()) then --waveform
-			core.OrderAbilityPosition(botBrain, skills.abilWaveForm, positionOffset(core.unitSelf:GetPosition(), atan2(vecWellPos.y-vecMyPos.y,vecWellPos.x-vecMyPos.x), skills.abilWaveForm:GetRange()))
+			return core.OrderAbilityPosition(botBrain, skills.abilWaveForm, positionOffset(core.unitSelf:GetPosition(), atan2(vecWellPos.y-vecMyPos.y,vecWellPos.x-vecMyPos.x), skills.abilWaveForm:GetRange()-100))
 		end
 	end
 	return object.HealAtWellExecuteOld(botBrain)
