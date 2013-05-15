@@ -1,23 +1,18 @@
---------------------------------------------------------------------
--- __  __                      _     _             ____        _   
---|  \/  |                    (_)   | |           |  _ \      | |  
---| \  / |_   _ _ __ _ __ ___  _  __| | ___  _ __ | |_) | ___ | |_ 
---| |\/| | | | | '__| '_ ` _ \| |/ _` |/ _ \| '_ \|  _ < / _ \| __|
---| |  | | |_| | |  | | | | | | | (_| | (_) | | | | |_) | (_) | |_ 
---|_|  |_|\__, |_|  |_| |_| |_|_|\__,_|\___/|_| |_|____/ \___/ \__|
---         __/ |                                                   
---        |___/         
---------------------------------------------------------------------
---       A HoN Community Bot Project        --
-----------------------------------------------
---                Created by:               --
-----------------------------------------------
---                    VHD                   --
---                  DarkFire                --
---                 Kairus101                --
-----------------------------------------------
-
---This is a test by VHD to see if he is intelligent enough to commit to a repo correctly...
+---------------------------------------------------
+-- ___  ___                    ______       _    --
+-- |  \/  |                    | ___ \     | |   --
+-- | .  . |_   _ _ __ _ __ ___ | |_/ / ___ | |_  --
+-- | |\/| | | | | '__| '_ ` _ \| ___ \/ _ \| __| --
+-- | |  | | |_| | |  | | | | | | |_/ / (_) | |_  --
+-- \_|  |_/\__, |_|  |_| |_| |_\____/ \___/ \__| --
+--          __/ |                                --
+--         |___/                                 --
+---------------------------------------------------
+--          A HoN Community Bot Project          --
+---------------------------------------------------
+--                  Created by:                  --
+--       DarkFire       VHD       Kairus101      --
+---------------------------------------------------
 
 ------------------------------------------
 --          Bot Initialization          --
@@ -77,7 +72,7 @@ BotEcho('loading myrmidon_main...')
 --          Constants          --
 ---------------------------------
 
--- Legionnaire
+-- Myrmidon
 object.heroName = 'Hero_Hydromancer'
 
 -- Item buy order. internal names
@@ -97,7 +92,6 @@ behaviorLib.LateItems =
 	--"Lightning2 is charged hammer. More attack speed, right?
 	--harkons, solid all round.
 	--heart, because we need tankyness now.
-	
 
 -- Skillbuild. 0 is Weed Field, 1 is Magic Carp, 2 is Wave Form, 3 is Forced Evolution, 4 is Attributes
 object.tSkills = {
@@ -127,7 +121,6 @@ object.nWaveFormThreshold = 45
 object.nForcedEvolutionThreshold = 40
 
 -- Other variables
---object.nLastTauntTime = 0
 
 ------------------------------
 --          Skills          --
@@ -163,12 +156,24 @@ end
 local function funcFindItemsOverride(botBrain)
 	local bUpdated = object.FindItemsOld(botBrain)
 
-	if core.itemGhostMarchers ~= nil and not core.itemGhostMarchers:IsValid() then
-		core.itemGhostMarchers = nil
+	if core.itemManaBattery ~= nil and not core.itemManaBattery:IsValid() then
+		core.itemManaBattery = nil
+	end
+	
+	if core.itemSteamboots ~= nil and not core.itemSteamboots:IsValid() then
+		core.itemSteamboots = nil
+	end
+	
+	if core.itemBloodChalice ~= nil and not core.itemBloodChalice:IsValid() then
+		core.itemBloodChalice = nil
 	end
 
+	if core.itemAlchBones ~= nil and not core.itemAlchBones:IsValid() then
+		core.itemAlchBones = nil
+	end
+	
 	if bUpdated then
-		if core.itemPortalKey and core.itemGhostMarchers and core.itemBarbedArmor then
+		if core.itemManaBattery and core.itemSteamboots and core.itemBloodChalice then
 			return
 		end
 
@@ -176,8 +181,14 @@ local function funcFindItemsOverride(botBrain)
 		for slot = 1, 12, 1 do
 			local curItem = inventory[slot]
 			if curItem then
-				if core.itemPortalKey == nil and curItem:GetName() == "Item_PortalKey" then
-					core.itemPortalKey = core.WrapInTable(curItem)
+				if core.itemManaBattery == nil and curItem:GetName() == "Item_ManaBattery" then
+					core.itemManaBattery = core.WrapInTable(curItem)
+				elseif core.itemSteamboots == nil and curItem:GetName() == "Item_Steamboots" then
+					core.itemSteamboots = core.WrapInTable(curItem)
+				elseif core.itemBloodChalice == nil and curItem:GetName() == "Item_BloodChalice" then
+					core.itemBloodChalice = core.WrapInTable(curItem)
+				elseif core.itemAlchBones == nil and curItem:GetName() == "Item_Gloves3" then
+					core.itemAlchBones = core.WrapInTable(curItem)
 				end
 			end
 		end
@@ -223,16 +234,12 @@ function object:oncombateventOverride(EventData)
 	if EventData.Type == "Ability" then
 		if EventData.InflictorName == "Ability_Myrmidon1" then
 			nAddBonus = nAddBonus + object.nWeedFieldUse
-		end
-		if EventData.InflictorName == "Ability_Myrmidon2" then
+		elseif EventData.InflictorName == "Ability_Myrmidon2" then
 			nAddBonus = nAddBonus + object.nMagicCarpUse
-		end
-		if EventData.InflictorName == "Ability_Myrmidon3" then
+		elseif EventData.InflictorName == "Ability_Myrmidon3" then
 			nAddBonus = nAddBonus + object.nWaveFormUse
-		end
-	elseif EventData.Type == "Item" then
-		if core.itemPortalKey ~= nil and EventData.SourceUnit == core.unitSelf:GetUniqueID() and EventData.InflictorName == core.itemPortalKey:GetName() then
-			nAddBonus = nAddBonus + self.nPortalKeyUse
+		elseif EventData.InflictorName == "Ability_Myrmidon4" then
+			nAddBonus = nAddBonus + object.nForcedEvolutionUse
 		end
 	end
 
@@ -268,10 +275,6 @@ local function CustomHarassUtilityFnOverride(hero)
 		nUtility = nUtility + object.nForcedEvolutionUp
 	end
 	
-	--if object.itemPortalKey and object.itemPortalKey:CanActivate() then
-	--	nUtility = nUtility + object.nPortalKeyUp
-	--end
-	
 	return nUtility
 end
 
@@ -290,30 +293,44 @@ local function HarassHeroExecuteOverride(botBrain)
 
 	local unitSelf = core.unitSelf
 	local vecMyPosition = unitSelf:GetPosition()
+	
 	local vecTargetPosition = unitTarget:GetPosition()
 	local nTargetDistanceSq = Vector3.Distance2DSq(vecMyPosition, vecTargetPosition)
+	local bCanSeeTarget = core.CanSeeUnit(botBrain, unitTarget)
+	
 	local nLastHarassUtility = behaviorLib.lastHarassUtil
-
 	local bActionTaken = false
 
 	--Weed Field
-	if not bActionTaken and skills.abilWeedField:CanActivate() and nLastHarassUtility>object.nWeedFieldThreshold then
-		bActionTaken = core.OrderAbilityPosition(botBrain, skills.abilWeedField, vecTargetPosition)
+	if not bActionTaken then
+		local abilWeedField = skills.abilWeedField
+		if abilWeedField:CanActivate() and nLastHarassUtility > object.nWeedFieldThreshold then
+			bActionTaken = core.OrderAbilityPosition(botBrain, skills.abilWeedField, vecTargetPosition)
+		end
 	end
 	
 	--Magic Carp
-	if not bActionTaken and skills.abilMagicCarp:CanActivate() and nLastHarassUtility>object.nMagicCarpThreshold then
-		bActionTaken = core.OrderAbilityEntity(botBrain, skills.abilMagicCarp, unitTarget)
+	if not bActionTaken then
+		local abilMagicCarp = skills.abilMagicCarp
+		if abilMagicCarp:CanActivate() and bCanSeeTarget and nLastHarassUtility > object.nMagicCarpThreshold then
+			bActionTaken = core.OrderAbilityEntity(botBrain, skills.abilMagicCarp, unitTarget)
+		end
 	end
 	
 	--Wave Form
-	if not bActionTaken and skills.abilWaveForm:CanActivate() and nLastHarassUtility>object.nWaveFormThreshold then
-		bActionTaken = core.OrderAbilityPosition(botBrain, skills.abilWaveForm, vecTargetPosition)
+	if not bActionTaken then
+		local abilWaveForm = skills.abilWaveForm
+		if abilWaveForm:CanActivate() and nLastHarassUtility > object.nWaveFormThreshold then
+			bActionTaken = core.OrderAbilityPosition(botBrain, skills.abilWaveForm, vecTargetPosition)
+		end
 	end
 	
 	--ForcedEvolution
-	if not bActionTaken and skills.abilForcedEvolution:CanActivate() and nLastHarassUtility>object.nForcedEvolutionThreshold then
-		bActionTaken = core.OrderAbility(botBrain, skills.abilForcedEvolution)
+	if not bActionTaken then
+		local abilForcedEvolution = skills.abilForcedEvolution
+		if abilForcedEvolution:CanActivate() and nLastHarassUtility>object.nForcedEvolutionThreshold then
+			bActionTaken = core.OrderAbility(botBrain, skills.abilForcedEvolution)
+		end
 	end
 
 	return bActionTaken
