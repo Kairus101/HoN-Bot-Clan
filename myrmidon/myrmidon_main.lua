@@ -1122,7 +1122,7 @@ behaviorLib.HealAtWellBehavior["Execute"] = AlchemistsBonesExecute
 --------------------------------------------
 --          PushExecute Override          --
 --------------------------------------------
-
+--[[
 -- Filters a group to be within a given range. Modified from St0l3n_ID's Chronos bot
 local function filterGroupRange(tGroup, vecCenter, nRange)
 	if tGroup and vecCenter and nRange then
@@ -1268,7 +1268,7 @@ end
 
 object.TeamGroupBehaviorOld = behaviorLib.TeamGroupBehavior["Execute"]
 behaviorLib.TeamGroupBehavior["Execute"] = TeamGroupBehaviorOverride
-
+--]]
 -----------------------------------
 --          Custom Chat          --
 -----------------------------------
