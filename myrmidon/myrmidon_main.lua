@@ -116,12 +116,15 @@ object.nWaveFormUse = 7
 object.nForcedEvolutionUse = 7
 
 -- Thresholds of aggression the bot must reach to use these abilities
-object.nWeedFieldThreshold = 35
-object.nMagicCarpThreshold = 25
-object.nWaveFormThreshold = 85
-object.nForcedEvolutionThreshold = 40
+object.nWeedFieldThreshold = 45
+object.nMagicCarpThreshold = 0
+object.nWaveFormThreshold = 95
+object.nForcedEvolutionThreshold = 60
 
 -- Other variables
+object.nOldRetreatFactor = 0.9--Decrease the value of the normal retreat behavior
+object.nMaxLevelDifference = 4--Ensure hero will not be too carefull
+object.nEnemyBaseThreat = 6--Base threat. Level differences and distance alter the actual threat level.
 
 ------------------------------
 --          Skills          --
@@ -203,7 +206,7 @@ core.FindItems = funcFindItemsOverride
 --          OnThink Override          --
 ----------------------------------------
 
-local btrackingCarp=false
+local bTrackingCarp=false
 local uCarpTarget
 
 function object:onthinkOverride(tGameVariables)
@@ -211,7 +214,7 @@ function object:onthinkOverride(tGameVariables)
 	local bDebugGadgets=false
 	local unitSelf=core.unitSelf
 	
-	if (bDebugGadgets or btrackingCarp) then
+	if (bDebugGadgets or bTrackingCarp) then
 		local tUnits = HoN.GetUnitsInRadius(unitSelf:GetPosition(), 2000, core.UNIT_MASK_ALIVE + core.UNIT_MASK_GADGET)
 		if tUnits then
 			for _, unit in pairs(tUnits) do
@@ -219,17 +222,17 @@ function object:onthinkOverride(tGameVariables)
 				-- CARP
 				--Carp speed is 600.
 				--Carp gadget is "Gadget_Hydromancer_Ability2_Reveal", and it is at the position of the carp itself.
-				if (btrackingCarp and unit:GetTypeName()=="Gadget_Hydromancer_Ability2_Reveal") then--carp is alive
+				if (bTrackingCarp and unit:GetTypeName()=="Gadget_Hydromancer_Ability2_Reveal") then--carp is alive
 					if (uCarpTarget and uCarpTarget:GetPosition()) then
-						BotEcho("Time till carp hit: "+Vector3.Distance2DSq(unitSelf:GetPosition(),uCarpTarget:GetPosition() )/(600*600))
+						BotEcho("Time till carp hit: "..Vector3.Distance2DSq(unit:GetPosition(),uCarpTarget:GetPosition() ).. "/"..(600*600).." = " ..Vector3.Distance2DSq(unitSelf:GetPosition(),uCarpTarget:GetPosition() )/(600*600))
 					end
 				end
 				
-				if (btrackingCarp and unit:GetTypeName()=="Gadget_Hydromancer_Ability2_Reveal_Linger") then -- carp is now dead
-					btrackingCarp=false
+				if (bTrackingCarp and unit:GetTypeName()=="Gadget_Hydromancer_Ability2_Reveal_Linger") then -- carp is now dead
+					bTrackingCarp=false
 				end
 				
-				if (bDebugGadgets) then
+				if (bDebugGadgets or bTrackingCarp) then
 					core.DrawDebugArrow(unitSelf:GetPosition(), unit:GetPosition(), 'yellow') --flint q/r, fairy port, antipull, homecoming, kongor, chronos ult
 					BotEcho(unit:GetTypeName())
 				end
@@ -373,6 +376,10 @@ local function HarassHeroExecuteOverride(botBrain)
 		if abilForcedEvolution:CanActivate() and nLastHarassUtility>object.nForcedEvolutionThreshold then
 			bActionTaken = core.OrderAbility(botBrain, skills.abilForcedEvolution)
 		end
+	end
+	
+	if (not bActionTaken) then
+		bActionTaken = object.harassExecuteOld(botBrain)
 	end
 
 	return bActionTaken
@@ -749,40 +756,42 @@ local function GetAttackDamageOnCreep(botBrain, unitCreepTarget)
 	--Get positioning information
 	local vecSelfPos = unitSelf:GetPosition()
 	local vecTargetPos = unitCreepTarget:GetPosition() 
-
-	--Get projectile info
-	local nProjectileSpeed = unitSelf:GetAttackProjectileSpeed() 
-	local nProjectileTravelTime = Vector3.Distance2D(vecSelfPos, vecTargetPos) / nProjectileSpeed
-	if bDebugEchos then BotEcho ("Projectile travel time: " .. nProjectileTravelTime ) end 
-	
 	local nExpectedCreepDamage = 0
 	local nExpectedTowerDamage = 0
-	local tNearbyAttackingCreeps = nil
-	local tNearbyAttackingTowers = nil
 
-	--Get the creeps and towers on the opposite team
-	-- of our target
-	if unitCreepTarget:GetTeam() == unitSelf:GetTeam() then
-		tNearbyAttackingCreeps = core.localUnits['EnemyCreeps']
-		tNearbyAttackingTowers = core.localUnits['EnemyTowers']
-	else
-		tNearbyAttackingCreeps = core.localUnits['AllyCreeps']
-		tNearbyAttackingTowers = core.localUnits['AllyTowers']
-	end
+	--Get projectile info
+	if (unitSelf:GetAttackType() ~= "melee") then --needed for ult.
+	local nProjectileSpeed = unitSelf:GetAttackProjectileSpeed()
+		local nProjectileTravelTime = Vector3.Distance2D(vecSelfPos, vecTargetPos) / nProjectileSpeed
+		if bDebugEchos then BotEcho ("Projectile travel time: " .. nProjectileTravelTime ) end 
+		
+		local tNearbyAttackingCreeps = nil
+		local tNearbyAttackingTowers = nil
 
-	--Determine the damage expected on the creep by other creeps
-	for i, unitCreep in pairs(tNearbyAttackingCreeps) do
-		if unitCreep:GetAttackTarget() == unitCreepTarget then
-			local nCreepAttacks = 1 + math.floor(unitCreep:GetAttackSpeed() * nProjectileTravelTime)
-			nExpectedCreepDamage = nExpectedCreepDamage + unitCreep:GetFinalAttackDamageMin() * nCreepAttacks
+		--Get the creeps and towers on the opposite team
+		-- of our target
+		if unitCreepTarget:GetTeam() == unitSelf:GetTeam() then
+			tNearbyAttackingCreeps = core.localUnits['EnemyCreeps']
+			tNearbyAttackingTowers = core.localUnits['EnemyTowers']
+		else
+			tNearbyAttackingCreeps = core.localUnits['AllyCreeps']
+			tNearbyAttackingTowers = core.localUnits['AllyTowers']
 		end
-	end
 
-	--Determine the damage expected on the creep by other towers
-	for i, unitTower in pairs(tNearbyAttackingTowers) do
-		if unitTower:GetAttackTarget() == unitCreepTarget then
-			local nTowerAttacks = 1 + math.floor(unitTower:GetAttackSpeed() * nProjectileTravelTime)
-			nExpectedTowerDamage = nExpectedTowerDamage + unitTower:GetFinalAttackDamageMin() * nTowerAttacks
+		--Determine the damage expected on the creep by other creeps
+		for i, unitCreep in pairs(tNearbyAttackingCreeps) do
+			if unitCreep:GetAttackTarget() == unitCreepTarget then
+				local nCreepAttacks = 1 + math.floor(unitCreep:GetAttackSpeed() * nProjectileTravelTime)
+				nExpectedCreepDamage = nExpectedCreepDamage + unitCreep:GetFinalAttackDamageMin() * nCreepAttacks
+			end
+		end
+
+		--Determine the damage expected on the creep by other towers
+		for i, unitTower in pairs(tNearbyAttackingTowers) do
+			if unitTower:GetAttackTarget() == unitCreepTarget then
+				local nTowerAttacks = 1 + math.floor(unitTower:GetAttackSpeed() * nProjectileTravelTime)
+				nExpectedTowerDamage = nExpectedTowerDamage + unitTower:GetFinalAttackDamageMin() * nTowerAttacks
+			end
 		end
 	end
 
@@ -872,6 +881,161 @@ function AttackCreepsExecuteOverride(botBrain)
 end
 object.AttackCreepsExecuteOld = behaviorLib.HarassHeroBehavior["Execute"]
 behaviorLib.AttackCreepsBehavior["Execute"] = AttackCreepsExecuteOverride
+
+--This function returns the position of the enemy hero.
+--If he is not shown on map it returns the last visible spot
+--as long as it is not older than 10s
+local function funcGetEnemyPosition (unitEnemy)
+
+	if unitEnemy == nil  then return Vector3.Create(20000, 20000) end 
+	--BotEcho(unitEnemy:GetTypeName())
+	local tEnemyPosition = core.unitSelf.tEnemyPosition
+	local tEnemyPositionTimestamp = core.unitSelf.tEnemyPositionTimestamp
+	
+	if tEnemyPosition == nil then
+		-- initialize new table
+		core.unitSelf.tEnemyPosition = {}
+		core.unitSelf.tEnemyPositionTimestamp = {}
+		
+		tEnemyPosition = core.unitSelf.tEnemyPosition
+		tEnemyPositionTimestamp = core.unitSelf.tEnemyPositionTimestamp
+		
+		local tEnemyTeam = HoN.GetHeroes(core.enemyTeam)
+		--vector beyond map
+		for x, hero in pairs(tEnemyTeam) do
+			tEnemyPosition[hero:GetUniqueID()] = Vector3.Create(20000, 20000)
+			tEnemyPositionTimestamp[hero:GetUniqueID()] = HoN.GetGameTime()
+		end
+		
+	end
+	
+	local vecPosition = unitEnemy:GetPosition()
+	
+	--enemy visible?
+	if vecPosition then
+		--update table
+		tEnemyPosition[unitEnemy:GetUniqueID()] = unitEnemy:GetPosition()
+		tEnemyPositionTimestamp[unitEnemy:GetUniqueID()] = HoN.GetGameTime()
+	end
+	
+	--BotEcho(tostring(unitEnemy).." is at position"..tostring(tEnemyPosition[unitEnemy:GetUniqueID()]))
+	
+	--return position, 10s memory
+	if tEnemyPositionTimestamp[unitEnemy:GetUniqueID()] <= HoN.GetGameTime() + 10000 then
+		return tEnemyPosition[unitEnemy:GetUniqueID()]
+	else
+		return Vector3.Create(20000, 20000)
+	end
+end
+
+local function funcGetThreatOfEnemy (unitEnemy)
+	--no unit selected or is dead
+	if unitEnemy == nil or not unitEnemy:IsAlive() then return 0 end
+	local unitSelf = core.unitSelf
+	
+	local vecMyPosition = unitSelf:GetPosition()
+	local vecEnemyPosition = funcGetEnemyPosition (unitEnemy)
+	local nDistanceSq = Vector3.Distance2DSq(vecMyPosition, vecEnemyPosition)
+	
+	--BotEcho("Distance: MyPosition "..tostring(vecMyPosition).." your position "..tostring(vecEnemyPosition).." Square "..nDistanceSq)
+	
+	
+	--unit is probably far away
+	if nDistanceSq > 4000000 then
+	
+		--BotEcho("UnitEnemy is "..unitEnemy:GetTypeName().." Distance "..nDistanceSq)
+		return 0
+	end
+			
+	local nMyLevel = unitSelf:GetLevel()
+	local nEnemyLevel = unitEnemy:GetLevel()
+	
+	--Level differences increase / decrease actual nThreat
+	local nThreat = object.nEnemyBaseThreat + Clamp(nEnemyLevel - nMyLevel, 0, object.nMaxLevelDifference)
+	
+	--Magic-Formel: Threat to Range, T(700²) = 2, T(1100²) = 1.5, T(2000²)= 0.75
+	nThreat = Clamp(3*(112810000-nDistanceSq) / (4*(19*nDistanceSq+32810000)),0.75,2) * nThreat
+
+	
+	--BotEcho("UnitEnemy is"..unitEnemy:GetTypeName().." and Threat"..nThreat.." and position " ..tostring(vecEnemyPosition))	
+	return nThreat
+end
+
+------------------------------------------------------------------
+--Retreat utility
+------------------------------------------------------------------
+local function CustomRetreatFromThreatUtilityFnOverride(botBrain)
+	local bDebugEchos = false
+	
+	local nUtilityOld = behaviorLib.lastRetreatUtil
+	--decrease old ThreatUtility
+	local nUtility = object.RetreatFromThreatUtilityOld(botBrain) * object.nOldRetreatFactor
+	
+	--decay with a maximum of 4 utilitypoints per frame to ensure a longer retreat time
+	if nUtilityOld > nUtility +4 then
+		nUtility = nUtilityOld -4
+	end
+	
+	--bonus of allies decrease fear
+	local allies = core.localUnits["AllyHeroes"]
+	local nAllies = core.NumberElements(allies) + 1 
+		
+	--get enemy heroes
+	local tEnemyTeam = HoN.GetHeroes(core.enemyTeam)
+		
+	--calculate the threat-value and increase utility value
+	for id, enemy in pairs(tEnemyTeam) do
+	--BotEcho (id.." Hero "..enemy:GetTypeName())
+		nUtility = nUtility + funcGetThreatOfEnemy(enemy) / nAllies
+	end
+	return Clamp(nUtility, 0, 100)
+	
+end
+object.RetreatFromThreatUtilityOld =  behaviorLib.RetreatFromThreatUtility
+behaviorLib.RetreatFromThreatBehavior["Utility"] = CustomRetreatFromThreatUtilityFnOverride
+
+local function funcRetreatFromThreatExecuteOverride(botBrain)
+
+	local unitSelf = core.unitSelf
+	local unitTarget = behaviorLib.heroTarget
+	
+	local vecPos = behaviorLib.PositionSelfBackUp()
+	local nlastRetreatUtil = behaviorLib.lastRetreatUtil
+	local nNow = HoN.GetGameTime()
+	
+	--Counting the enemies 	
+	local tEnemies = core.localUnits["EnemyHeroes"]
+	local nCount = 0
+
+	local bCanSeeUnit = unitTarget and core.CanSeeUnit(botBrain, unitTarget) 
+	for id, unitEnemy in pairs(tEnemies) do
+		if core.CanSeeUnit(botBrain, unitEnemy) then
+			nCount = nCount + 1
+		end
+	end
+	
+	-- More enemies or low on life
+	if (nCount > 1 or unitSelf:GetHealthPercent() < .4) and bCanSeeUnit then
+		local vecMyPosition = unitSelf:GetPosition()
+		local vecTargetPosition = unitTarget:GetPosition()
+		local nTargetDistanceSq = Vector3.Distance2DSq(vecMyPosition, vecTargetPosition)
+		local bTargetVuln = unitTarget:IsStunned() or unitTarget:IsImmobilized()
+	
+		--WeedField
+		local abilWeedField = skills.abilWeedField
+		if abilWeedField:CanActivate() then
+			local nRange = abilWeedField:GetRange()
+			if nTargetDistanceSq < (nRange * nRange) then
+				core.OrderAbilityPosition(botBrain, abilWeedField, vecTargetPosition)
+				return
+			end
+		end
+	end
+	core.OrderMoveToPosClamp(botBrain, core.unitSelf, vecPos, false)
+end
+
+object.RetreatFromThreatExecuteOld = behaviorLib.RetreatFromThreatExecute
+behaviorLib.RetreatFromThreatBehavior["Execute"] = funcRetreatFromThreatExecuteOverride
 
 -----------------------------------
 --          Custom Chat          --
