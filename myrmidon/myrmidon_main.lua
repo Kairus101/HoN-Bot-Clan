@@ -339,6 +339,363 @@ end
 object.harassExecuteOld = behaviorLib.HarassHeroBehavior["Execute"]
 behaviorLib.HarassHeroBehavior["Execute"] = HarassHeroExecuteOverride
 
+--------------------------------------
+--          UseHealthRegen          --
+--------------------------------------
+--
+-- Utility: 0 to 40
+-- Based on missing health
+--
+-- Execute: 
+-- Use a Rune of the Blight, Health Pot, or Bottle to heal
+-- Will only use Health Pot or Bottle if it is safe
+--
+
+-------- Global Constants & Variables --------
+behaviorLib.nBatterySupplyHealthUtility = 0
+
+behaviorLib.bUseBatterySupplyForHealth = true
+
+-------- Helper Functions --------
+local function GetSafeDrinkDirection()
+	-- Returns vector to a safe direciton to retreat to drink if the bot is threatened
+	-- Returns nil if safe
+	local bDebugLines = true
+	local vecSafeDirection = nil
+	local vecSelfPos = core.unitSelf:GetPosition()
+	local tThreateningUnits = {}
+	for _, unitEnemy in pairs(core.localUnits["EnemyUnits"]) do
+		local nAbsRange = core.GetAbsoluteAttackRangeToUnit(unitEnemy, unitSelf)
+		local nDist = Vector3.Distance2D(vecSelfPos, unitEnemy:GetPosition())
+		if nDist < nAbsRange * 1.15 then
+			local unitPair = {}
+			unitPair[1] = unitEnemy
+			unitPair[2] = (nAbsRange * 1.15 - nDist)
+			tinsert(tThreateningUnits, unitPair)
+		end
+	end
+
+	local curTimeMS = HoN.GetGameTime()
+	if core.NumberElements(tThreateningUnits) > 0 or eventsLib.recentDotTime > curTimeMS or #eventsLib.incomingProjectiles["all"] > 0 then
+		-- Determine best "away from threat" vector
+		local vecAway = Vector3.Create()
+		for _, unitPair in pairs(tThreateningUnits) do
+			local unitAwayVec = Vector3.Normalize(vecSelfPos - unitPair[1]:GetPosition())
+			vecAway = vecAway + unitAwayVec * unitPair[2]
+
+			if bDebugLines then
+				core.DrawDebugArrow(unitPair[1]:GetPosition(), unitPair[1]:GetPosition() + unitAwayVec * unitPair[2], 'teal')
+			end
+		end
+
+		if core.NumberElements(tThreateningUnits) > 0 then
+			vecAway = Vector3.Normalize(vecAway)
+		end
+
+		-- Average vecAway with "retreat" vector
+		local vecRetreat = Vector3.Normalize(behaviorLib.PositionSelfBackUp() - vecSelfPos)
+		local vecSafeDirection = Vector3.Normalize(vecAway + vecRetreat)
+
+		if bDebugLines then
+			local nLineLen = 150
+			core.DrawDebugArrow(vecSelfPos, vecSelfPos + vecRetreat * nLineLen, 'blue')
+			core.DrawDebugArrow(vecSelfPos, vecSelfPos + vecAway * nLineLen, 'teal')
+			core.DrawDebugArrow(vecSelfPos, vecSelfPos + vecSafeDirection * nLineLen, 'white')
+			core.DrawXPosition(vecSelfPos + vecSafeDirection * core.moveVecMultiplier, 'blue')
+		end
+	end
+
+	return vecSafeDirection
+end
+
+local function BatterySupplyHealthUtilFn(nHealthMissing, nCharges)
+	-- With 1 Charge:
+	-- Roughly 20+ when we are missing 28 health
+	-- Function which crosses 20 at x=28 and 40 at x=300, convex down
+	-- With 15 Charges:
+	-- Roughly 20+ when we are missing 168 health
+	-- Function which crosses 20 at x=168 and 30 at x=320, convex down
+
+	local nHealAmount = 10 * nCharges
+	local nHealBuffer = 18
+	local nUtilityThreshold = 20
+
+	local vecPoint = Vector3.Create(nHealAmount + nHealBuffer, nUtilityThreshold)
+	local vecOrigin = Vector3.Create(-250, -30)
+	return core.ATanFn(nHealthMissing, vecPoint, vecOrigin, 100)
+end
+
+-------- Behavior Functions --------
+local function UseHealthRegenUtilityOverride(botBrain)
+	StartProfile("Init")
+	local bDebugLines = false
+
+	local nUtility = 0
+	local nBatterySupplyUtility = 0
+	local nHealthPotUtility = 0
+	local nBlightsUtility = 0
+
+	local unitSelf = core.unitSelf
+	local nHealthMissing = unitSelf:GetMaxHealth() - unitSelf:GetHealth()
+	local tInventory = unitSelf:GetInventory()
+	StopProfile()
+
+	StartProfile("Mana Battery/Power Supply")
+	if behaviorLib.bUseBatterySupplyForHealth then
+		local itemManaBattery = core.itemManaBattery
+		local itemPowerSupply = core.itemPowerSupply
+		local itemBatterySupply = nil
+		if itemManaBattery then
+			itemBatterySupply = itemManaBattery
+		elseif itemPowerSupply then
+			itemBatterySupply = itemPowerSupply
+		end
+
+		if itemBatterySupply and itemBatterySupply:CanActivate() then
+			local nCharges = itemBatterySupply:GetCharges()
+			if nCharges > 0 then
+				nBatterySupplyUtility = BatterySupplyHealthUtilFn(nHealthMissing, nCharges)
+			end
+		end
+	end
+	StopProfile()
+
+	StartProfile("Health pot")
+	local tHealthPots = core.InventoryContains(tInventory, "Item_HealthPotion")
+	if #tHealthPots > 0 and not unitSelf:HasState("State_HealthPotion") then
+		nHealthPotUtility = behaviorLib.HealthPotUtilFn(nHealthMissing)
+	end
+	StopProfile()
+
+	StartProfile("Runes")
+	local tBlights = core.InventoryContains(tInventory, "Item_RunesOfTheBlight")
+	if #tBlights > 0 and not unitSelf:HasState("State_RunesOfTheBlight") then
+		nBlightsUtility = behaviorLib.RunesOfTheBlightUtilFn(nHealthMissing)
+	end
+	StopProfile()
+
+	StartProfile("End")
+	nUtility = max(nBatterySupplyUtility, nHealthPotUtility, nBlightsUtility)
+	nUtility = Clamp(nUtility, 0, 100)
+
+	behaviorLib.nBatterySupplyHealthUtility = nBatterySupplyUtility
+	behaviorLib.nHealthPotUtility = nHealthPotUtility
+	behaviorLib.nBlightsUtility = nBlightsUtility
+
+	if bDebugLines then
+		local vecLaneForward = object.vecLaneForward
+		if vecLaneForward then
+			local vecPos = unitSelf:GetPosition()
+			local nHalfSafeTreeAngle = behaviorLib.safeTreeAngle / 2
+			local vec1 = core.RotateVec2D(-vecLaneForward, nHalfSafeTreeAngle)
+			local vec2 = core.RotateVec2D(-vecLaneForward, -nHalfSafeTreeAngle)
+			core.DrawDebugLine(vecPos, vecPos + vec1 * 2000, 'white')
+			core.DrawDebugLine(vecPos, vecPos + vec2 * 2000, 'white')
+			core.DrawDebugArrow(vecPos, vecPos + -vecLaneForward * 150, 'white')
+		end
+	end
+
+	if botBrain.bDebugUtility == true and nUtility ~= 0 then
+		BotEcho(format("  UseHealthRegenUtility: %g", nUtility))
+	end
+	StopProfile()
+
+	return nUtility
+end
+
+local function UseHealthRegenExecuteOverride(botBrain)
+	local bDebugLines = false
+	local bActionTaken = false
+	local unitSelf = core.unitSelf
+	local vecSelfPos = unitSelf:GetPosition()
+	local tInventory = unitSelf:GetInventory()
+	local nMaxUtility = max(behaviorLib.nBatterySupplyHealthUtility, behaviorLib.nBlightsUtility, behaviorLib.nHealthPotUtility)
+
+	-- Use Runes to heal
+	if not bActionTaken and behaviorLib.nBlightsUtility == nMaxUtility then
+		local tBlights = core.InventoryContains(tInventory, "Item_RunesOfTheBlight")
+		if #tBlights > 0 and not unitSelf:HasState("State_RunesOfTheBlight") then
+			-- Get closest tree
+			local unitClosestTree = nil
+			local nClosestTreeDistSq = 9999 * 9999
+			local vecLaneForward = object.vecLaneForward
+			local vecLaneForwardNeg = -vecLaneForward
+			local funcRadToDeg = core.RadToDeg
+			local funcAngleBetween = core.AngleBetween
+			local nHalfSafeTreeAngle = behaviorLib.safeTreeAngle / 2
+
+			core.UpdateLocalTrees()
+			local tTrees = core.localTrees
+			for _, unitTree in pairs(tTrees) do
+				vecTreePosition = unitTree:GetPosition()
+				-- "Safe" trees are backwards
+				if not vecLaneForward or abs(funcRadToDeg(funcAngleBetween(vecTreePosition - vecSelfPos, vecLaneForwardNeg)) ) < nHalfSafeTreeAngle then
+					local nDistSq = Vector3.Distance2DSq(vecTreePosition, vecSelfPos)
+					if nDistSq < nClosestTreeDistSq then
+						unitClosestTree = unitTree
+						nClosestTreeDistSq = nDistSq
+						if bDebugLines then
+							core.DrawXPosition(vecTreePosition, 'yellow')
+						end
+					end
+				end
+			end
+
+			if unitClosestTree then
+				bActionTaken = core.OrderItemEntityClamp(botBrain, unitSelf, tBlights[1], unitClosestTree)
+			end
+		end
+	end
+
+	-- Use Health Potion to heal
+	if not bActionTaken and behaviorLib.nHealthPotUtility == nMaxUtility then
+		local tHealthPots = core.InventoryContains(tInventory, "Item_HealthPotion")
+		if #tHealthPots > 0 and not unitSelf:HasState("State_HealthPotion") then
+			local vecRetreatDirection = GetSafeDrinkDirection()
+			-- Check if it is safe to drink
+			if vecRetreatDirection then
+				bActionTaken = core.OrderMoveToPosClamp(botBrain, unitSelf, vecSelfPos + vecRetreatDirection * core.moveVecMultiplier, false)
+			else
+				bActionTaken = core.OrderItemEntityClamp(botBrain, unitSelf, tHealthPots[1], unitSelf)
+			end
+		end
+	end
+
+	-- Use Mana Battery/Power Supply to heal
+	if not bActionTaken and behaviorLib.nBatterySupplyHealthUtility == nMaxUtility then
+		local itemManaBattery = core.itemManaBattery
+		local itemPowerSupply = core.itemPowerSupply
+		local itemBatterySupply = nil
+		if itemManaBattery then
+			itemBatterySupply = itemManaBattery
+		elseif itemPowerSupply then
+			itemBatterySupply = itemPowerSupply
+		end
+
+		if itemBatterySupply and itemBatterySupply:CanActivate() and itemBatterySupply:GetCharges() > 0 then
+			bActionTaken = core.OrderItemClamp(botBrain, unitSelf, itemBatterySupply)
+		end
+	end
+
+	return bActionTaken
+end
+
+behaviorLib.UseHealthRegenBehavior["Utility"] = UseHealthRegenUtilityOverride
+behaviorLib.UseHealthRegenBehavior["Execute"] = UseHealthRegenExecuteOverride
+
+------------------------------------
+--          UseManaRegen          --
+------------------------------------
+--
+-- Utility: 0 to 40
+-- Based on missing mana
+--
+-- Execute:
+-- Use Mana Battery to restore mana
+--
+
+-------- Global Constants & Variables --------
+behaviorLib.nBatterySupplyManaUtility = 0
+
+behaviorLib.bUseBatterySupplyForMana = true
+
+-------- Helper Functions --------
+function behaviorLib.BatterySupplyManaUtilFn(nManaMissing, nCharges)
+	-- With 1 Charge:
+	-- Roughly 20+ when we are missing 40 mana
+	-- Function which crosses 20 at x=40 and 40 at x=260, convex down
+	-- With 15 Charges:
+	-- Roughly 20+ when we are missing 280 mana
+	-- Function which crosses 20 at x=280 and 30 at x=470, convex down
+
+	local nManaRegenAmount = 15 * nCharges
+	local nManaBuffer = 25
+	local nUtilityThreshold = 20
+
+	local vecPoint = Vector3.Create(nManaRegenAmount + nManaBuffer, nUtilityThreshold)
+	local vecOrigin = Vector3.Create(-60, -50)
+	return core.ATanFn(nManaMissing, vecPoint, vecOrigin, 100)
+end
+
+-------- Behavior Functions --------
+function behaviorLib.UseManaRegenUtility(botBrain)
+	StartProfile("Init")
+	local bDebugEchos = false
+
+	local nUtility = 0
+	local nBatterySupplyUtility = 0
+
+	local unitSelf = core.unitSelf
+	local nManaMissing = unitSelf:GetMaxMana() - unitSelf:GetMana()
+	local tInventory = unitSelf:GetInventory()
+	StopProfile()
+
+	StartProfile("Mana Battery/Power Supply")
+	if behaviorLib.bUseBatterySupplyForMana then
+		local itemManaBattery = core.itemManaBattery
+		local itemPowerSupply = core.itemPowerSupply
+		local itemBatterySupply = nil
+		if itemManaBattery then
+			itemBatterySupply = itemManaBattery
+		elseif itemPowerSupply then
+			itemBatterySupply = itemPowerSupply
+		end
+
+		if itemBatterySupply and itemBatterySupply:CanActivate() then
+			local nCharges = itemBatterySupply:GetCharges()
+			if nCharges > 0 then
+				nBatterySupplyUtility = behaviorLib.BatterySupplyManaUtilFn(nManaMissing, nCharges)
+			end
+		end
+	end
+	StopProfile()
+
+	StartProfile("End")
+	nUtility = max(nBatterySupplyUtility)
+	nUtility = Clamp(nUtility, 0, 100)
+
+	behaviorLib.nBatterySupplyManaUtility = nBatterySupplyUtility
+
+	if botBrain.bDebugUtility == true and nUtility ~= 0 then
+		BotEcho(format("  UseManaRegenUtility: %g", nUtility))
+	end
+	StopProfile()
+
+	return nUtility
+end
+
+function behaviorLib.UseManaRegenExecute(botBrain)
+	local bActionTaken = false
+	local unitSelf = core.unitSelf
+	local vecSelfPos = unitSelf:GetPosition()
+	local tInventory = unitSelf:GetInventory()
+	local nMaxUtility = max(behaviorLib.nBatterySupplyManaUtility)
+
+	-- Use Mana Battery/Power Supply to regen mana
+	if not bActionTaken and behaviorLib.nBatterySupplyManaUtility == nMaxUtility then
+		local itemManaBattery = core.itemManaBattery
+		local itemPowerSupply = core.itemPowerSupply
+		local itemBatterySupply = nil
+		if itemManaBattery then
+			itemBatterySupply = itemManaBattery
+		elseif itemPowerSupply then
+			itemBatterySupply = itemPowerSupply
+		end
+
+		if itemBatterySupply and itemBatterySupply:CanActivate() and itemBatterySupply:GetCharges() > 0 then
+			bActionTaken = core.OrderItemClamp(botBrain, unitSelf, itemBatterySupply)
+		end
+	end
+
+	return bActionTaken
+end
+
+behaviorLib.UseManaRegenBehavior = {}
+behaviorLib.UseManaRegenBehavior["Utility"] = behaviorLib.UseManaRegenUtility
+behaviorLib.UseManaRegenBehavior["Execute"] = behaviorLib.UseManaRegenExecute
+behaviorLib.UseManaRegenBehavior["Name"] = "UseManaRegen"
+tinsert(behaviorLib.tBehaviors, behaviorLib.UseManaRegenBehavior)
+
 -----------------------------------
 --          Custom Chat          --
 -----------------------------------
