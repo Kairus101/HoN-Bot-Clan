@@ -42,8 +42,7 @@
 --			Turn on when target is slow/immobalized and we are in close/melee range?
 
 --  Other
---		Find a way to use mana pots effectively early game?
---		Use Weed on most creeps possible when PushBehavior is active (and no enemy heroes nearby)? 
+--		I can implement mana pots into UseManaRegen if we want to use them (The code is already written just needs to be copy-pasted) -DarkFire
 
 ------------------------------------------
 --          Bot Initialization          --
@@ -1118,7 +1117,157 @@ local function AlchemistsBonesExecute(botBrain)
 end
 behaviorLib.HealAtWellBehavior["Utility"] = AlchemistsBonesUtility
 behaviorLib.HealAtWellBehavior["Execute"] = AlchemistsBonesExecute
-]]
+--]]
+
+--------------------------------------------
+--          PushExecute Override          --
+--------------------------------------------
+
+-- Filters a group to be within a given range. Modified from St0l3n_ID's Chronos bot
+local function filterGroupRange(tGroup, vecCenter, nRange)
+	if tGroup and vecCenter and nRange then
+		local tResult = {}
+		for _, unitTarget in pairs(tGroup) do
+			if Vector3.Distance2DSq(unitTarget:GetPosition(), vecCenter) <= (nRange * nRange) then
+				tinsert(tResult, unitTarget)
+			end
+		end	
+
+		if #tResult > 0 then
+			return tResult
+		end
+	end
+
+	return nil
+end
+
+-- Find the angle in degrees between two targets. Modified from St0l3n_ID's AngToTarget code
+local function getAngToTarget(unitSelf, unitTarget)
+	local vecSelf = unitSelf:GetPosition()
+	local vecTarget = unitTarget:GetPosition()
+	local nDeltaY = vecTarget.y - vecSelf.y
+	local nDeltaX = vecTarget.x - vecSelf.x
+
+	return nAng = floor(atan2(nDeltaY, nDeltaX) * 57.2957795131) -- That number is 180 / pi
+end
+
+local function getBestWeedFieldCastDirection(tLocalUnits, nMinimumCount)
+	if nMinimumCount == nil then
+		nMinimumCount = 1
+	end
+	
+	if tLocalUnits and core.NumberElements(tLocalUnits) >= nMinimumCount then
+		local unitSelf = core.unitSelf
+		local vecMyPosition = unitSelf:GetPosition()
+		local tTargetsInRange = filterGroupRange(tLocalTargets, vecMyPosition, 1000)
+		if tTargetsInRange and #tTargetsInRange >= nMinimumCount then
+			local tAngleOfTargetsInRange = {}
+			for _, unitTarget in pairs(tTargetsInRange) do
+				local vecEnemyPosition = unitTarget:GetPosition()
+				local vecDirection = Vector3.Normalize(vecEnemyPosition - vecMyPosition)
+				vecDirection = core.RotateVec2DRad(vecDirection, pi / 2)
+
+				local nHighAngle = getAngToTarget(vecMyPosition, vecEnemyPosition + vecDirection * 50)
+				local nMidAngle = getAngToTarget(vecMyPosition, vecEnemyPosition)
+				local nLowAngle = getAngToTarget(vecMyPosition, vecEnemyPosition - vecDirection * 50)
+
+				tinsert(tAngleOfTargetsInRange, {nHighAngle, nMidAngle, nLowAngle})
+			end
+		
+		
+			local tBestGroup = {}
+			local tCurrentGroup = {}
+			for _, tStartAngles in pairs(tAngleOfTargetsInRange) do
+				local nStartAngle = tStartAngles[2]
+				if nStartAngle <= -90 then
+					-- Avoid doing calculations near the break in numbers
+					nStartAngle = nStartAngle + 360
+				end
+
+				for _, tAngles in pairs(tAngleOfTargetsInRange) do
+					local nHighAngle = tAngles[1]
+					local nMidAngle = tAngles[2]
+					local nLowAngle = tAngles[3]
+					if nStartAngle > 90 and nStartAngle <= 270 then
+						if nHighAngle < 0 then
+							nHighAngle = nHighAngle + 360
+						end
+						
+						if nMidAngle < 0 then
+							nMidAngle = nMidAngle + 360
+						end
+							
+						if nLowAngle < 0 then
+							nLowAngle = nLowAngle + 360
+						end
+					end
+
+
+					if nHighAngle >= nStartAngle and nStartAngle >= nLowAngle then
+						tinsert(tCurrentGroup, nMidAngle)
+					end
+				end
+
+				if #tCurrentGroup > #tBestGroup then
+					tBestGroup = tCurrentGroup
+				end
+
+				tCurrentGroup = {}
+			end
+		
+			local nBestGroupSize = #tBestGroup
+			
+			if nBestGroupSize >= nMinCount then
+				tsort(tBestGroup)
+
+				local nAvgAngle = (tBestGroup[1] + tBestGroup[nBestGroupSize]) / 2 * 0.01745329251 -- That number is pi / 180
+
+				return Vector3.Create(cos(nAvgAngle), sin(nAvgAngle)) * 500
+			end
+		end
+	end
+	
+	return nil
+end
+
+local function AbilityPush(botBrain)
+	local bSuccess = false
+	local abilWeedField = skills.abilWeedField
+	local unitSelf = core.unitSelf
+	local nMinimumCreeps = 3
+
+	-- Stop the bot from trying to farm creeps if the creeps approach the spot where the bot died
+	if not unitSelf:IsAlive() then
+		return bSuccess
+	end
+
+	if abilWeedField:CanActivate() and unitSelf:GetManaPercent() > .4 then
+		local vecCastDirection = getBestWeedFieldCastDirection(core.localUnits["EnemyCreeps"], 3)
+		if vecCastDirection then 
+			bSuccess = core.OrderAbilityPosition(botBrain, abilWeedField, unitSelf:GetPosition() + vecCastDirection)
+		end
+	end
+
+	return bSuccess
+end
+
+local function PushExecuteOverride(botBrain)
+	if not AbilityPush(botBrain) then 
+		return object.PushExecuteOld(botBrain)
+	end
+end
+
+object.PushExecuteOld = behaviorLib.PushBehavior["Execute"]
+behaviorLib.PushBehavior["Execute"] = PushExecuteOverride
+
+local function TeamGroupBehaviorOverride(botBrain)
+	if not AbilityPush(botBrain) then 
+		return object.TeamGroupBehaviorOld(botBrain)
+	end
+end
+
+object.TeamGroupBehaviorOld = behaviorLib.TeamGroupBehavior["Execute"]
+behaviorLib.TeamGroupBehavior["Execute"] = TeamGroupBehaviorOverride
 
 -----------------------------------
 --          Custom Chat          --
