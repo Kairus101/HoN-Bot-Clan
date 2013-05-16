@@ -14,7 +14,9 @@
 --       DarkFire       VHD       Kairus101      --
 ---------------------------------------------------
 
---Proposed TO-DO list (please add/edit/delete as appropriate, guys!)
+--Urgent: load error syntax issue?
+
+--Proposed TO-DO list
 --	Items:
 --		Refine item choices
 --  		Need to decide on gank/support/tank/nuke build (or variable build?)
@@ -25,16 +27,17 @@
 
 --  Retreat behavior
 --		Ult if about to die (for +hp)
---		Waveform away (pick node nearest max range wave form away from threat).
+--		Waveform away (pick node nearest max range wave away from threat).
 --			Can we detect incoming damage sources before they hit (MOA nuke, hammer stun, ellonia ult) and wave away?
---		Weed/carp to slow down persuer?
+--		Weed/carp to slow down pursuer?
 
 --  Harass behavior
 --		Weed:
+--			Test/refine target's location prediction?  Currently using Stolen's RA meteor code, but only tracks current target...
 --			If carp active, track target and carp locations.  Estimate intercept and cast weed field so that it triggers at time/location of carp intercept
---			If carp not active, calculate predicted target position based on target move speed, location, last known location and cast weed appropriately
 --		Carp:
 --			Cast on targets out of attack range that have HP pot on
+--			Set up thresholds/sequence to cast before weed when possible (allow setup synergy for better chance of landing weed field)
 --		Wave:
 --			For far off targets with low hp, use to close distance in order to get nukes off?
 --			For close targets, use in a way to pass through enemy target (to slow target)
@@ -360,6 +363,73 @@ end
 
 behaviorLib.CustomHarassUtility = CustomHarassUtilityFnOverride
 
+
+
+
+-- A fixed list seems to be better then to check on each cycle if its  exist
+-- so we create it here
+local tRelativeMovements = {}
+local function createRelativeMovementTable(key)
+	--BotEcho('Created a relative movement table for: '..key)
+	tRelativeMovements[key] = {
+		vLastPos = Vector3.Create(),
+		vRelMov = Vector3.Create(),
+		timestamp = 0
+	}
+--	BotEcho('Created a relative movement table for: '..tRelativeMovements[key].timestamp)
+end
+createRelativeMovementTable("MyrmField") -- for landing Weed Field
+
+-- tracks movement for targets based on a list, so its reusable
+-- key is the identifier for different uses (fe. RaMeteor for his path of destruction)
+-- vTargetPos should be passed the targets position of the moment
+-- to use this for prediction add the vector to a units position and multiply it
+-- the function checks for 100ms cycles so one second should be multiplied by 20
+local function relativeMovement(sKey, vTargetPos)
+	local debugEchoes = false
+	
+	local gameTime = HoN.GetGameTime()
+	local key = sKey
+	local vLastPos = tRelativeMovements[key].vLastPos
+	local nTS = tRelativeMovements[key].timestamp
+	local timeDiff = gameTime - nTS 
+	
+	if debugEchoes then
+		BotEcho('Updating relative movement for key: '..key)
+		BotEcho('Relative Movement position: '..vTargetPos.x..' | '..vTargetPos.y..' at timestamp: '..nTS)
+		BotEcho('Relative lastPosition is this: '..vLastPos.x)
+	end
+	
+	if timeDiff >= 90 and timeDiff <= 140 then -- 100 should be enough (every second cycle)
+		local relativeMov = vTargetPos-vLastPos
+		
+		if vTargetPos.LengthSq > vLastPos.LengthSq
+		then relativeMov =  relativeMov*-1 end
+		
+		tRelativeMovements[key].vRelMov = relativeMov
+		tRelativeMovements[key].vLastPos = vTargetPos
+		tRelativeMovements[key].timestamp = gameTime
+		
+		
+		if debugEchoes then
+			BotEcho('Relative movement -- x: '..relativeMov.x..' y: '..relativeMov.y)
+			BotEcho('^r---------------Return new-'..tRelativeMovements[key].vRelMov.x)
+		end
+		
+		return relativeMov
+	elseif timeDiff >= 150 then
+		tRelativeMovements[key].vRelMov =  Vector3.Create(0,0)
+		tRelativeMovements[key].vLastPos = vTargetPos
+		tRelativeMovements[key].timestamp = gameTime
+	end
+	
+	if debugEchoes then BotEcho('^g---------------Return old-'..tRelativeMovements[key].vRelMov.x) end
+	return tRelativeMovements[key].vRelMov
+end
+
+
+
+
 ----------------------------------------
 --          Harass Behaviour          --
 ----------------------------------------
@@ -378,6 +448,9 @@ local function HarassHeroExecuteOverride(botBrain)
 	local nTargetDistanceSq = Vector3.Distance2DSq(vecMyPosition, vecTargetPosition)
 	local bCanSeeTarget = core.CanSeeUnit(botBrain, unitTarget)
 	
+	local nPredictField = 16 -- nCastTime = 1600 --can we extract this from ability/affector? casttime="500" and castactiontime="100" and impactdelay="1000"
+	local relativeMov = relativeMovement("MyrmField", vecTargetPosition) * nPredictField
+
 	local nLastHarassUtility = behaviorLib.lastHarassUtil
 	local bActionTaken = false
 	if ( unitTarget:GetHealthPercent() <= .15) then
@@ -385,10 +458,28 @@ local function HarassHeroExecuteOverride(botBrain)
 	end
 	
 	--Weed Field
+	--Currently trying to use Stolen's Ra prediction code.  Consider reworking and track all old hero positions.  Set up vecTargetOldPosition
+	--vecTargetPredictPosition = vecTargetPosition + (Vector3.Normalize(vecTargetPosition - vecTargetOldPosition) * nMovespeed * (nCastTime / 1000) )
 	if not bActionTaken then
+		local debugEchoes = true
 		local abilWeedField = skills.abilWeedField
-		if abilWeedField:CanActivate() and nLastHarassUtility > object.nWeedFieldThreshold and nTargetDistanceSq<(skills.abilWaveForm:GetRange()-100)*(skills.abilWaveForm:GetRange()-100) then
-			bActionTaken = core.OrderAbilityPosition(botBrain, skills.abilWeedField, vecTargetPosition)
+		local nRange = abilWeedField:GetRange()
+		local nMovespeed = unitSelf:GetMoveSpeed()
+		
+		if abilWeedField:CanActivate() and nLastHarassUtility > object.nWeedFieldThreshold then
+			local vecTargetPredictPosition = vecTargetPosition + relativeMov
+			if(Vector3.Distance2DSq(vecMyPosition, vecTargetPredictPosition) < nRange * nRange) then
+				if not bTrackingCarp then
+					bActionTaken = core.OrderAbilityPosition(botBrain, skills.abilWeedField, vecTargetPredictPosition)
+				--elseif (nCastTime) < (est time for carp to reach vecTargetPredictPosition) then --perfect time to cast weed field!
+				--	bActionTaken = core.OrderAbilityPosition(botBrain, skills.abilWeedField, vecTargetPredictPosition)
+				end
+			end
+		end
+		
+		if(object.bDebugEchos) then
+			core.DrawXPosition(vecTargetPosition + relativeMov, 'purple', 100)
+			core.DrawDebugLine(vecMyPosition, vecTargetPosition + relativeMov, 'purple')
 		end
 	end
 	
@@ -1148,7 +1239,7 @@ local function getAngToTarget(unitSelf, unitTarget)
 	local nDeltaY = vecTarget.y - vecSelf.y
 	local nDeltaX = vecTarget.x - vecSelf.x
 
-	return nAng = floor(atan2(nDeltaY, nDeltaX) * 57.2957795131) -- That number is 180 / pi
+	return nAng = floor( atan2(nDeltaY, nDeltaX) * 57.2957795131) -- That number is 180 / pi **ERROR ON LOAD: ')' expected near '='
 end
 
 local function getBestWeedFieldCastDirection(tLocalUnits, nMinimumCount)
