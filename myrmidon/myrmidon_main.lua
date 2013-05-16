@@ -1083,7 +1083,7 @@ behaviorLib.HealAtWellBehavior["Execute"] = AlchemistsBonesExecute
 --------------------------------------------
 --          PushExecute Override          --
 --------------------------------------------
---[[
+
 -- Filters a group to be within a given range. Modified from St0l3n_ID's Chronos bot
 local function filterGroupRange(tGroup, vecCenter, nRange)
 	if tGroup and vecCenter and nRange then
@@ -1103,13 +1103,11 @@ local function filterGroupRange(tGroup, vecCenter, nRange)
 end
 
 -- Find the angle in degrees between two targets. Modified from St0l3n_ID's AngToTarget code
-local function getAngToTarget(unitSelf, unitTarget)
-	local vecSelf = unitSelf:GetPosition()
-	local vecTarget = unitTarget:GetPosition()
+local function getAngToTarget(vecSelf, vecTarget)
 	local nDeltaY = vecTarget.y - vecSelf.y
 	local nDeltaX = vecTarget.x - vecSelf.x
 
-	return nAng = floor( atan2(nDeltaY, nDeltaX) * 57.2957795131) -- That number is 180 / pi **ERROR ON LOAD: ')' expected near '='
+	return floor( atan2(nDeltaY, nDeltaX) * 57.2957795131) -- That number is 180 / pi **ERROR ON LOAD: ')' expected near '='
 end
 
 local function getBestWeedFieldCastDirection(tLocalUnits, nMinimumCount)
@@ -1134,7 +1132,6 @@ local function getBestWeedFieldCastDirection(tLocalUnits, nMinimumCount)
 
 				tinsert(tAngleOfTargetsInRange, {nHighAngle, nMidAngle, nLowAngle})
 			end
-		
 		
 			local tBestGroup = {}
 			local tCurrentGroup = {}
@@ -1178,7 +1175,7 @@ local function getBestWeedFieldCastDirection(tLocalUnits, nMinimumCount)
 		
 			local nBestGroupSize = #tBestGroup
 			
-			if nBestGroupSize >= nMinCount then
+			if nBestGroupSize >= nMinimumCount then
 				tsort(tBestGroup)
 
 				local nAvgAngle = (tBestGroup[1] + tBestGroup[nBestGroupSize]) / 2 * 0.01745329251 -- That number is pi / 180
@@ -1229,7 +1226,7 @@ end
 
 object.TeamGroupBehaviorOld = behaviorLib.TeamGroupBehavior["Execute"]
 behaviorLib.TeamGroupBehavior["Execute"] = TeamGroupBehaviorOverride
---]]
+
 -----------------------------------
 --          Custom Chat          --
 -----------------------------------
