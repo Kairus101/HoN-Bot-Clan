@@ -448,8 +448,8 @@ local function HarassHeroExecuteOverride(botBrain)
 	local nTargetDistanceSq = Vector3.Distance2DSq(vecMyPosition, vecTargetPosition)
 	local bCanSeeTarget = core.CanSeeUnit(botBrain, unitTarget)
 	
-	local nPredictField = 16 -- nCastTime = 1600 --can we extract this from ability/affector? casttime="500" and castactiontime="100" and impactdelay="1000"
-	local relativeMov = relativeMovement("MyrmField", vecTargetPosition) * nPredictField
+	local nPredictField = 11 -- nCastTime = 1000 --can we extract this from ability/affector? casttime="500" and castactiontime="100" and impactdelay="1000"
+	local vecRelativeMov = relativeMovement("MyrmField", vecTargetPosition) * nPredictField
 
 	local nLastHarassUtility = behaviorLib.lastHarassUtil
 	local bActionTaken = false
@@ -458,7 +458,7 @@ local function HarassHeroExecuteOverride(botBrain)
 	end
 	
 	--Weed Field
-	--Currently trying to use Stolen's Ra prediction code.  Consider reworking and track all old hero positions.  Set up vecTargetOldPosition
+	--Currently trying to use Stolen's Ra prediction code.  Consider reworking and track all old hero positions?
 	--vecTargetPredictPosition = vecTargetPosition + (Vector3.Normalize(vecTargetPosition - vecTargetOldPosition) * nMovespeed * (nCastTime / 1000) )
 	if not bActionTaken then
 		local bDebugEchoes = true
@@ -466,24 +466,22 @@ local function HarassHeroExecuteOverride(botBrain)
 		local nRange = abilWeedField:GetRange()
 		local nMovespeed = unitSelf:GetMoveSpeed()
 		
-		if(object.bDebugEchoes) then BotEcho("Checking weed field.") end
-		
 		if abilWeedField:CanActivate() and nLastHarassUtility > object.nWeedFieldThreshold then
-			local vecTargetPredictPosition = vecTargetPosition + relativeMov
+			local vecTargetPredictPosition = vecTargetPosition + vecRelativeMov
 			if(Vector3.Distance2DSq(vecMyPosition, vecTargetPredictPosition) < nRange * nRange) then
 				if not bTrackingCarp then
 					bActionTaken = core.OrderAbilityPosition(botBrain, skills.abilWeedField, vecTargetPredictPosition)
-					if(object.bDebugEchoes) then BotEcho("Casting weed field!") end
+					if(bDebugEchoes) then BotEcho("Casting weed field!") end
 				--elseif (nCastTime) < (est time for carp to reach vecTargetPredictPosition) then --perfect time to cast weed field!
 				--	bActionTaken = core.OrderAbilityPosition(botBrain, skills.abilWeedField, vecTargetPredictPosition)
 				end
 			end
 		end
 		
-		if(object.bDebugEchoes) then
-			core.DrawXPosition(vecTargetPosition + relativeMov, 'purple', 100)
-			core.DrawDebugLine(vecTargetPosition, vecTargetPosition + relativeMov, 'red')
-			core.DrawDebugLine(vecMyPosition, vecTargetPosition + relativeMov, 'green')
+		if(bDebugEchoes) then
+			core.DrawXPosition(vecTargetPosition + vecRelativeMov, 'purple', 100) --vecTargetPredictPosition
+			core.DrawDebugArrow(vecTargetPosition, vecTargetPosition + vecRelativeMov, 'red') --predicted target movement path
+			core.DrawDebugArrow(vecMyPosition, vecMyPosition + (Vector3.Normalize((vecTargetPosition + vecRelativeMov) - vecMyPosition)) * nRange, 'green') --weed field range aimed at predicted position
 		end
 	end
 	
