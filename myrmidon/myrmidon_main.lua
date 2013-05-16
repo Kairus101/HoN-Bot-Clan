@@ -269,7 +269,7 @@ function object:onthinkOverride(tGameVariables)
 					bTrackingCarp=false
 				end
 				
-				if (bDebugGadgets or bTrackingCarp) then
+				if (bDebugGadgets) then
 					core.DrawDebugArrow(unitSelf:GetPosition(), unit:GetPosition(), 'yellow') --flint q/r, fairy port, antipull, homecoming, kongor, chronos ult
 					BotEcho(unit:GetTypeName())
 				end
@@ -922,35 +922,16 @@ local function funcGetEnemyPosition (unitEnemy)
 end
 
 local function funcGetThreatOfEnemy (unitEnemy)
-	--no unit selected or is dead
 	if unitEnemy == nil or not unitEnemy:IsAlive() then return 0 end
 	local unitSelf = core.unitSelf
-	
-	local vecMyPosition = unitSelf:GetPosition()
-	local vecEnemyPosition = funcGetEnemyPosition (unitEnemy)
-	local nDistanceSq = Vector3.Distance2DSq(vecMyPosition, vecEnemyPosition)
-	
-	--BotEcho("Distance: MyPosition "..tostring(vecMyPosition).." your position "..tostring(vecEnemyPosition).." Square "..nDistanceSq)
-	
-	
-	--unit is probably far away
-	if nDistanceSq > 4000000 then
-	
-		--BotEcho("UnitEnemy is "..unitEnemy:GetTypeName().." Distance "..nDistanceSq)
-		return 0
-	end
-			
+	local nDistanceSq = Vector3.Distance2DSq(unitSelf:GetPosition(), funcGetEnemyPosition (unitEnemy))
+	if nDistanceSq > 4000000 then return 0 end			
 	local nMyLevel = unitSelf:GetLevel()
 	local nEnemyLevel = unitEnemy:GetLevel()
-	
 	--Level differences increase / decrease actual nThreat
 	local nThreat = object.nEnemyBaseThreat + Clamp(nEnemyLevel - nMyLevel, 0, object.nMaxLevelDifference)
-	
 	--Magic-Formel: Threat to Range, T(700²) = 2, T(1100²) = 1.5, T(2000²)= 0.75
 	nThreat = Clamp(3*(112810000-nDistanceSq) / (4*(19*nDistanceSq+32810000)),0.75,2) * nThreat
-
-	
-	--BotEcho("UnitEnemy is"..unitEnemy:GetTypeName().." and Threat"..nThreat.." and position " ..tostring(vecEnemyPosition))	
 	return nThreat
 end
 
@@ -959,9 +940,7 @@ end
 ------------------------------------------------------------------
 local function CustomRetreatFromThreatUtilityFnOverride(botBrain)
 	local bDebugEchos = false
-	
 	local nUtilityOld = behaviorLib.lastRetreatUtil
-	--decrease old ThreatUtility
 	local nUtility = object.RetreatFromThreatUtilityOld(botBrain) * object.nOldRetreatFactor
 	
 	--decay with a maximum of 4 utilitypoints per frame to ensure a longer retreat time
@@ -971,27 +950,21 @@ local function CustomRetreatFromThreatUtilityFnOverride(botBrain)
 	
 	--bonus of allies decrease fear
 	local allies = core.localUnits["AllyHeroes"]
-	local nAllies = core.NumberElements(allies) + 1 
-		
+	local nAllies = core.NumberElements(allies) + 1
 	--get enemy heroes
 	local tEnemyTeam = HoN.GetHeroes(core.enemyTeam)
-		
 	--calculate the threat-value and increase utility value
 	for id, enemy in pairs(tEnemyTeam) do
-	--BotEcho (id.." Hero "..enemy:GetTypeName())
 		nUtility = nUtility + funcGetThreatOfEnemy(enemy) / nAllies
 	end
 	return Clamp(nUtility, 0, 100)
-	
 end
 object.RetreatFromThreatUtilityOld =  behaviorLib.RetreatFromThreatUtility
 behaviorLib.RetreatFromThreatBehavior["Utility"] = CustomRetreatFromThreatUtilityFnOverride
 
 local function funcRetreatFromThreatExecuteOverride(botBrain)
-
 	local unitSelf = core.unitSelf
 	local unitTarget = behaviorLib.heroTarget
-	
 	local vecPos = behaviorLib.PositionSelfBackUp()
 	local nlastRetreatUtil = behaviorLib.lastRetreatUtil
 	local nNow = HoN.GetGameTime()
@@ -999,16 +972,13 @@ local function funcRetreatFromThreatExecuteOverride(botBrain)
 	--Counting the enemies 	
 	local tEnemies = core.localUnits["EnemyHeroes"]
 	local nCount = 0
-
 	local bCanSeeUnit = unitTarget and core.CanSeeUnit(botBrain, unitTarget) 
 	for id, unitEnemy in pairs(tEnemies) do
 		if core.CanSeeUnit(botBrain, unitEnemy) then
 			nCount = nCount + 1
 		end
 	end
-	
-	-- More enemies or low on life
-	if (nCount > 1 or unitSelf:GetHealthPercent() < .4) and bCanSeeUnit then
+	if (nCount > 1 or unitSelf:GetHealthPercent() < .4) and bCanSeeUnit then -- More enemies or low on life
 		local vecMyPosition = unitSelf:GetPosition()
 		local vecTargetPosition = unitTarget:GetPosition()
 		local nTargetDistanceSq = Vector3.Distance2DSq(vecMyPosition, vecTargetPosition)
@@ -1083,153 +1053,6 @@ end
 behaviorLib.HealAtWellBehavior["Utility"] = AlchemistsBonesUtility
 behaviorLib.HealAtWellBehavior["Execute"] = AlchemistsBonesExecute
 --]]
-
---------------------------------------------
---          PushExecute Override          --
---------------------------------------------
-
--- Filters a group to be within a given range. Modified from St0l3n_ID's Chronos bot
-local function filterGroupRange(tGroup, vecCenter, nRange)
-	if tGroup and vecCenter and nRange then
-		local tResult = {}
-		for _, unitTarget in pairs(tGroup) do
-			if Vector3.Distance2DSq(unitTarget:GetPosition(), vecCenter) <= (nRange * nRange) then
-				tinsert(tResult, unitTarget)
-			end
-		end	
-
-		if #tResult > 0 then
-			return tResult
-		end
-	end
-
-	return nil
-end
-
--- Find the angle in degrees between two targets. Modified from St0l3n_ID's AngToTarget code
-local function getAngToTarget(vecSelf, vecTarget)
-	local nDeltaY = vecTarget.y - vecSelf.y
-	local nDeltaX = vecTarget.x - vecSelf.x
-
-	return floor( atan2(nDeltaY, nDeltaX) * 57.2957795131) -- That number is 180 / pi **ERROR ON LOAD: ')' expected near '='
-end
-
-local function getBestWeedFieldCastDirection(tLocalUnits, nMinimumCount)
-	if nMinimumCount == nil then
-		nMinimumCount = 1
-	end
-	
-	if tLocalUnits and core.NumberElements(tLocalUnits) >= nMinimumCount then
-		local unitSelf = core.unitSelf
-		local vecMyPosition = unitSelf:GetPosition()
-		local tTargetsInRange = filterGroupRange(tLocalTargets, vecMyPosition, 1000)
-		if tTargetsInRange and #tTargetsInRange >= nMinimumCount then
-			local tAngleOfTargetsInRange = {}
-			for _, unitTarget in pairs(tTargetsInRange) do
-				local vecEnemyPosition = unitTarget:GetPosition()
-				local vecDirection = Vector3.Normalize(vecEnemyPosition - vecMyPosition)
-				vecDirection = core.RotateVec2DRad(vecDirection, pi / 2)
-
-				local nHighAngle = getAngToTarget(vecMyPosition, vecEnemyPosition + vecDirection * 50)
-				local nMidAngle = getAngToTarget(vecMyPosition, vecEnemyPosition)
-				local nLowAngle = getAngToTarget(vecMyPosition, vecEnemyPosition - vecDirection * 50)
-
-				tinsert(tAngleOfTargetsInRange, {nHighAngle, nMidAngle, nLowAngle})
-			end
-		
-			local tBestGroup = {}
-			local tCurrentGroup = {}
-			for _, tStartAngles in pairs(tAngleOfTargetsInRange) do
-				local nStartAngle = tStartAngles[2]
-				if nStartAngle <= -90 then
-					-- Avoid doing calculations near the break in numbers
-					nStartAngle = nStartAngle + 360
-				end
-
-				for _, tAngles in pairs(tAngleOfTargetsInRange) do
-					local nHighAngle = tAngles[1]
-					local nMidAngle = tAngles[2]
-					local nLowAngle = tAngles[3]
-					if nStartAngle > 90 and nStartAngle <= 270 then
-						if nHighAngle < 0 then
-							nHighAngle = nHighAngle + 360
-						end
-						
-						if nMidAngle < 0 then
-							nMidAngle = nMidAngle + 360
-						end
-							
-						if nLowAngle < 0 then
-							nLowAngle = nLowAngle + 360
-						end
-					end
-
-
-					if nHighAngle >= nStartAngle and nStartAngle >= nLowAngle then
-						tinsert(tCurrentGroup, nMidAngle)
-					end
-				end
-
-				if #tCurrentGroup > #tBestGroup then
-					tBestGroup = tCurrentGroup
-				end
-
-				tCurrentGroup = {}
-			end
-		
-			local nBestGroupSize = #tBestGroup
-			
-			if nBestGroupSize >= nMinimumCount then
-				tsort(tBestGroup)
-
-				local nAvgAngle = (tBestGroup[1] + tBestGroup[nBestGroupSize]) / 2 * 0.01745329251 -- That number is pi / 180
-
-				return Vector3.Create(cos(nAvgAngle), sin(nAvgAngle)) * 500
-			end
-		end
-	end
-	
-	return nil
-end
-
-local function AbilityPush(botBrain)
-	local bSuccess = false
-	local abilWeedField = skills.abilWeedField
-	local unitSelf = core.unitSelf
-	local nMinimumCreeps = 3
-
-	-- Stop the bot from trying to farm creeps if the creeps approach the spot where the bot died
-	if not unitSelf:IsAlive() then
-		return bSuccess
-	end
-
-	if abilWeedField:CanActivate() and unitSelf:GetManaPercent() > .4 then
-		local vecCastDirection = getBestWeedFieldCastDirection(core.localUnits["EnemyCreeps"], 3)
-		if vecCastDirection then 
-			bSuccess = core.OrderAbilityPosition(botBrain, abilWeedField, unitSelf:GetPosition() + vecCastDirection)
-		end
-	end
-
-	return bSuccess
-end
-
-local function PushExecuteOverride(botBrain)
-	if not AbilityPush(botBrain) then 
-		return object.PushExecuteOld(botBrain)
-	end
-end
-
-object.PushExecuteOld = behaviorLib.PushBehavior["Execute"]
-behaviorLib.PushBehavior["Execute"] = PushExecuteOverride
-
-local function TeamGroupBehaviorOverride(botBrain)
-	if not AbilityPush(botBrain) then 
-		return object.TeamGroupBehaviorOld(botBrain)
-	end
-end
-
-object.TeamGroupBehaviorOld = behaviorLib.TeamGroupBehavior["Execute"]
-behaviorLib.TeamGroupBehavior["Execute"] = TeamGroupBehaviorOverride
 
 -----------------------------------
 --          Custom Chat          --
