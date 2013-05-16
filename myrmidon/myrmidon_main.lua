@@ -453,7 +453,7 @@ local function HarassHeroExecuteOverride(botBrain)
 
 	local nLastHarassUtility = behaviorLib.lastHarassUtil
 	local bActionTaken = false
-	if ( unitTarget:GetHealthPercent() <= .15) then
+	if (core.itemBloodChalice and core.itemBloodChalice:CanActivate() and unitTarget:GetHealthPercent() <= .15) then
 		botBrain:OrderItem(core.itemBloodChalice.object or core.itemBloodChalice, false)
 	end
 	
