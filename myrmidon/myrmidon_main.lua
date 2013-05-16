@@ -531,57 +531,6 @@ behaviorLib.nBatterySupplyHealthUtility = 0
 behaviorLib.bUseBatterySupplyForHealth = true
 
 -------- Helper Functions --------
-local function GetSafeDrinkDirection()
-	-- Returns vector to a safe direciton to retreat to drink if the bot is threatened
-	-- Returns nil if safe
-	local bDebugLines = true
-	local vecSafeDirection = nil
-	local vecSelfPos = core.unitSelf:GetPosition()
-	local tThreateningUnits = {}
-	for _, unitEnemy in pairs(core.localUnits["EnemyUnits"]) do
-		local nAbsRange = core.GetAbsoluteAttackRangeToUnit(unitEnemy, unitSelf)
-		local nDist = Vector3.Distance2D(vecSelfPos, unitEnemy:GetPosition())
-		if nDist < nAbsRange * 1.15 then
-			local unitPair = {}
-			unitPair[1] = unitEnemy
-			unitPair[2] = (nAbsRange * 1.15 - nDist)
-			tinsert(tThreateningUnits, unitPair)
-		end
-	end
-
-	local curTimeMS = HoN.GetGameTime()
-	if core.NumberElements(tThreateningUnits) > 0 or eventsLib.recentDotTime > curTimeMS or #eventsLib.incomingProjectiles["all"] > 0 then
-		-- Determine best "away from threat" vector
-		local vecAway = Vector3.Create()
-		for _, unitPair in pairs(tThreateningUnits) do
-			local unitAwayVec = Vector3.Normalize(vecSelfPos - unitPair[1]:GetPosition())
-			vecAway = vecAway + unitAwayVec * unitPair[2]
-
-			if bDebugLines then
-				core.DrawDebugArrow(unitPair[1]:GetPosition(), unitPair[1]:GetPosition() + unitAwayVec * unitPair[2], 'teal')
-			end
-		end
-
-		if core.NumberElements(tThreateningUnits) > 0 then
-			vecAway = Vector3.Normalize(vecAway)
-		end
-
-		-- Average vecAway with "retreat" vector
-		local vecRetreat = Vector3.Normalize(behaviorLib.PositionSelfBackUp() - vecSelfPos)
-		local vecSafeDirection = Vector3.Normalize(vecAway + vecRetreat)
-
-		if bDebugLines then
-			local nLineLen = 150
-			core.DrawDebugArrow(vecSelfPos, vecSelfPos + vecRetreat * nLineLen, 'blue')
-			core.DrawDebugArrow(vecSelfPos, vecSelfPos + vecAway * nLineLen, 'teal')
-			core.DrawDebugArrow(vecSelfPos, vecSelfPos + vecSafeDirection * nLineLen, 'white')
-			core.DrawXPosition(vecSelfPos + vecSafeDirection * core.moveVecMultiplier, 'blue')
-		end
-	end
-
-	return vecSafeDirection
-end
-
 local function BatterySupplyHealthUtilFn(nHealthMissing, nCharges)
 	-- With 1 Charge:
 	-- Roughly 20+ when we are missing 28 health
@@ -606,12 +555,9 @@ local function UseHealthRegenUtilityOverride(botBrain)
 
 	local nUtility = 0
 	local nBatterySupplyUtility = 0
-	local nHealthPotUtility = 0
-	local nBlightsUtility = 0
 
 	local unitSelf = core.unitSelf
 	local nHealthMissing = unitSelf:GetMaxHealth() - unitSelf:GetHealth()
-	local tInventory = unitSelf:GetInventory()
 	StopProfile()
 
 	StartProfile("Mana Battery/Power Supply")
@@ -625,46 +571,14 @@ local function UseHealthRegenUtilityOverride(botBrain)
 		end
 	end
 	StopProfile()
-
-	StartProfile("Health pot")
-	local tHealthPots = core.InventoryContains(tInventory, "Item_HealthPotion")
-	if #tHealthPots > 0 and not unitSelf:HasState("State_HealthPotion") then
-		nHealthPotUtility = behaviorLib.HealthPotUtilFn(nHealthMissing)
-	end
-	StopProfile()
-
-	StartProfile("Runes")
-	local tBlights = core.InventoryContains(tInventory, "Item_RunesOfTheBlight")
-	if #tBlights > 0 and not unitSelf:HasState("State_RunesOfTheBlight") then
-		nBlightsUtility = behaviorLib.RunesOfTheBlightUtilFn(nHealthMissing)
-	end
-	StopProfile()
+	
+	local nOldUtility = object.useHealthRegenUtilityOld(botBrain)
 
 	StartProfile("End")
-	nUtility = max(nBatterySupplyUtility, nHealthPotUtility, nBlightsUtility)
+	nUtility = max(nBatterySupplyUtility, nOldUtility)
 	nUtility = Clamp(nUtility, 0, 100)
 
 	behaviorLib.nBatterySupplyHealthUtility = nBatterySupplyUtility
-	behaviorLib.nHealthPotUtility = nHealthPotUtility
-	behaviorLib.nBlightsUtility = nBlightsUtility
-
-	if bDebugLines then
-		local vecLaneForward = object.vecLaneForward
-		if vecLaneForward then
-			local vecPos = unitSelf:GetPosition()
-			local nHalfSafeTreeAngle = behaviorLib.safeTreeAngle / 2
-			local vec1 = core.RotateVec2D(-vecLaneForward, nHalfSafeTreeAngle)
-			local vec2 = core.RotateVec2D(-vecLaneForward, -nHalfSafeTreeAngle)
-			core.DrawDebugLine(vecPos, vecPos + vec1 * 2000, 'white')
-			core.DrawDebugLine(vecPos, vecPos + vec2 * 2000, 'white')
-			core.DrawDebugArrow(vecPos, vecPos + -vecLaneForward * 150, 'white')
-		end
-	end
-
-	if botBrain.bDebugUtility == true and nUtility ~= 0 then
-		BotEcho(format("  UseHealthRegenUtility: %g", nUtility))
-	end
-	StopProfile()
 
 	return nUtility
 end
@@ -686,56 +600,6 @@ local function UseHealthRegenExecuteOverride(botBrain)
 		end
 	end
 
-	-- Use Runes to heal
-	if not bActionTaken and behaviorLib.nBlightsUtility == nMaxUtility then
-		local tBlights = core.InventoryContains(tInventory, "Item_RunesOfTheBlight")
-		if #tBlights > 0 and not unitSelf:HasState("State_RunesOfTheBlight") then
-			-- Get closest tree
-			local unitClosestTree = nil
-			local nClosestTreeDistSq = 9999 * 9999
-			local vecLaneForward = object.vecLaneForward
-			local vecLaneForwardNeg = -vecLaneForward
-			local funcRadToDeg = core.RadToDeg
-			local funcAngleBetween = core.AngleBetween
-			local nHalfSafeTreeAngle = behaviorLib.safeTreeAngle / 2
-
-			core.UpdateLocalTrees()
-			local tTrees = core.localTrees
-			for _, unitTree in pairs(tTrees) do
-				vecTreePosition = unitTree:GetPosition()
-				-- "Safe" trees are backwards
-				if not vecLaneForward or abs(funcRadToDeg(funcAngleBetween(vecTreePosition - vecSelfPos, vecLaneForwardNeg)) ) < nHalfSafeTreeAngle then
-					local nDistSq = Vector3.Distance2DSq(vecTreePosition, vecSelfPos)
-					if nDistSq < nClosestTreeDistSq then
-						unitClosestTree = unitTree
-						nClosestTreeDistSq = nDistSq
-						if bDebugLines then
-							core.DrawXPosition(vecTreePosition, 'yellow')
-						end
-					end
-				end
-			end
-
-			if unitClosestTree then
-				bActionTaken = core.OrderItemEntityClamp(botBrain, unitSelf, tBlights[1], unitClosestTree)
-			end
-		end
-	end
-
-	-- Use Health Potion to heal
-	if not bActionTaken and behaviorLib.nHealthPotUtility == nMaxUtility then
-		local tHealthPots = core.InventoryContains(tInventory, "Item_HealthPotion")
-		if #tHealthPots > 0 and not unitSelf:HasState("State_HealthPotion") then
-			local vecRetreatDirection = GetSafeDrinkDirection()
-			-- Check if it is safe to drink
-			if vecRetreatDirection then
-				bActionTaken = core.OrderMoveToPosClamp(botBrain, unitSelf, vecSelfPos + vecRetreatDirection * core.moveVecMultiplier, false)
-			else
-				bActionTaken = core.OrderItemEntityClamp(botBrain, unitSelf, tHealthPots[1], unitSelf)
-			end
-		end
-	end
-
 	-- Use Mana Battery/Power Supply to heal
 	if not bActionTaken and behaviorLib.nBatterySupplyHealthUtility == nMaxUtility then
 		local itemBatterySupply = core.itemManaBattery or core.itemPowerSupply
@@ -744,10 +608,16 @@ local function UseHealthRegenExecuteOverride(botBrain)
 		end
 	end
 
+	if not bActionTaken then
+		return object.useHealthRegenExecuteOld(botBrain)
+	end
+
 	return bActionTaken
 end
 
+object.useHealthRegenUtilityOld = behaviorLib.UseHealthRegenBehavior["Utility"]
 behaviorLib.UseHealthRegenBehavior["Utility"] = UseHealthRegenUtilityOverride
+object.useHealthRegenExecuteOld = behaviorLib.UseHealthRegenBehavior["Execute"]
 behaviorLib.UseHealthRegenBehavior["Execute"] = UseHealthRegenExecuteOverride
 
 ------------------------------------
