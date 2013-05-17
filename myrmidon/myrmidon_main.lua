@@ -217,8 +217,8 @@ local function funcFindItemsOverride(botBrain)
 			return
 		end
 
-		local inventory = core.unitSelf:GetInventory(true)
-		for slot = 1, 12, 1 do
+		local inventory = core.unitSelf:GetInventory(false)
+		for slot = 1, 6 do
 			local curItem = inventory[slot]
 			if curItem then
 				if core.itemManaBattery == nil and curItem:GetName() == "Item_ManaBattery" then
@@ -426,9 +426,6 @@ local function relativeMovement(sKey, vTargetPos)
 	if debugEchoes then BotEcho('^g---------------Return old-'..tRelativeMovements[key].vRelMov.x) end
 	return tRelativeMovements[key].vRelMov
 end
-
-
-
 
 ----------------------------------------
 --          Harass Behaviour          --
@@ -877,20 +874,15 @@ behaviorLib.AttackCreepsBehavior["Execute"] = AttackCreepsExecuteOverride
 --If he is not shown on map it returns the last visible spot
 --as long as it is not older than 10s
 local function funcGetEnemyPosition (unitEnemy)
-
 	if unitEnemy == nil  then return Vector3.Create(20000, 20000) end 
-	--BotEcho(unitEnemy:GetTypeName())
 	local tEnemyPosition = core.unitSelf.tEnemyPosition
 	local tEnemyPositionTimestamp = core.unitSelf.tEnemyPositionTimestamp
-	
 	if tEnemyPosition == nil then
 		-- initialize new table
 		core.unitSelf.tEnemyPosition = {}
 		core.unitSelf.tEnemyPositionTimestamp = {}
-		
 		tEnemyPosition = core.unitSelf.tEnemyPosition
 		tEnemyPositionTimestamp = core.unitSelf.tEnemyPositionTimestamp
-		
 		local tEnemyTeam = HoN.GetHeroes(core.enemyTeam)
 		--vector beyond map
 		for x, hero in pairs(tEnemyTeam) do
@@ -899,18 +891,13 @@ local function funcGetEnemyPosition (unitEnemy)
 		end
 		
 	end
-	
 	local vecPosition = unitEnemy:GetPosition()
-	
 	--enemy visible?
 	if vecPosition then
 		--update table
 		tEnemyPosition[unitEnemy:GetUniqueID()] = unitEnemy:GetPosition()
 		tEnemyPositionTimestamp[unitEnemy:GetUniqueID()] = HoN.GetGameTime()
 	end
-	
-	--BotEcho(tostring(unitEnemy).." is at position"..tostring(tEnemyPosition[unitEnemy:GetUniqueID()]))
-	
 	--return position, 10s memory
 	if tEnemyPositionTimestamp[unitEnemy:GetUniqueID()] <= HoN.GetGameTime() + 10000 then
 		return tEnemyPosition[unitEnemy:GetUniqueID()]
