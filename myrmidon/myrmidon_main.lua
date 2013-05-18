@@ -947,6 +947,22 @@ end
 object.RetreatFromThreatUtilityOld =  behaviorLib.RetreatFromThreatUtility
 behaviorLib.RetreatFromThreatBehavior["Utility"] = CustomRetreatFromThreatUtilityFnOverride
 
+
+local function positionOffset(pos, angle, distance) --this is used by minions to form a ring around people.
+	tmp = Vector3.Create(cos(angle)*distance,sin(angle)*distance)
+	return tmp+pos
+end
+local function waveFormToBase(botBrain)
+	local vecWellPos = core.allyWell and core.allyWell:GetPosition() or behaviorLib.PositionSelfBackUp()
+	local vecMyPos=core.unitSelf:GetPosition()
+	if (Vector3.Distance2DSq(vecMyPos, vecWellPos)>600*600)then
+		if (skills.abilWaveForm:CanActivate()) then --waveform
+			return core.OrderAbilityPosition(botBrain, skills.abilWaveForm, positionOffset(core.unitSelf:GetPosition(), atan2(vecWellPos.y-vecMyPos.y,vecWellPos.x-vecMyPos.x), skills.abilWaveForm:GetRange()))
+		end
+	end
+	return false
+end
+
 local function funcRetreatFromThreatExecuteOverride(botBrain)
 	local unitSelf = core.unitSelf
 	local unitTarget = behaviorLib.heroTarget
@@ -978,66 +994,109 @@ local function funcRetreatFromThreatExecuteOverride(botBrain)
 				return
 			end
 		end
+		
+		if waveFormToBase(botBrain) then return true end
+		
 	end
-	core.OrderMoveToPosClamp(botBrain, core.unitSelf, vecPos, false)
+	return core.OrderMoveToPosClamp(botBrain, core.unitSelf, vecPos, false)
 end
 
 object.RetreatFromThreatExecuteOld = behaviorLib.RetreatFromThreatExecute
 behaviorLib.RetreatFromThreatBehavior["Execute"] = funcRetreatFromThreatExecuteOverride
 
-local function positionOffset(pos, angle, distance) --this is used by minions to form a ring around people.
-	tmp = Vector3.Create(cos(angle)*distance,sin(angle)*distance)
-	return tmp+pos
-end
 ----------------------------------------------------
 --             Heal At Well Override              --
 ----------------------------------------------------
 --return to well more often. --2000 gold adds 8 to return utility, 0% mana also adds 8.
 --When returning to well, use skills and items.
 local function HealAtWellUtilityOverride(botBrain)
-	if (Vector3.Distance2DSq(core.unitSelf:GetPosition(), core.allyWell and core.allyWell:GetPosition() or behaviorLib.PositionSelfBackUp())<400*400 and core.unitSelf:GetManaPercent()*100<95) then return 80 end
 	return object.HealAtWellUtilityOld(botBrain)*1.75+(botBrain:GetGold()*8/2000)+ 8-(core.unitSelf:GetManaPercent()*8) --couragously flee back to base.
 end
 local function HealAtWellExecuteOverride(botBrain)
-	local vecWellPos = core.allyWell and core.allyWell:GetPosition() or behaviorLib.PositionSelfBackUp()
-	local vecMyPos=core.unitSelf:GetPosition()
-	if (Vector3.Distance2DSq(vecMyPos, vecWellPos)>600*600)then
-		if (skills.abilWaveForm:CanActivate()) then --waveform
-			return core.OrderAbilityPosition(botBrain, skills.abilWaveForm, positionOffset(core.unitSelf:GetPosition(), atan2(vecWellPos.y-vecMyPos.y,vecWellPos.x-vecMyPos.x), skills.abilWaveForm:GetRange()-50))
-		end
-	end
-	return object.HealAtWellExecuteOld(botBrain)
+	return waveFormToBase(botBrain) or object.HealAtWellExecuteOld(botBrain)
 end
 object.HealAtWellUtilityOld = behaviorLib.HealAtWellBehavior["Utility"]
 object.HealAtWellExecuteOld = behaviorLib.HealAtWellBehavior["Execute"]
 behaviorLib.HealAtWellBehavior["Utility"] = HealAtWellUtilityOverride
 behaviorLib.HealAtWellBehavior["Execute"] = HealAtWellExecuteOverride
 
---[[
+jungleLib.jungleSpots[6].difficulty=10000
+jungleLib.jungleSpots[12].difficulty=10000
+--from here on, units we don't want for alch bones is negative a bit
+--Units we want to kill:
+jungleLib.creepDifficulty.Neutral_Minotaur=1000
+jungleLib.creepDifficulty.Neutral_Catman_leader=1000
+jungleLib.creepDifficulty.Neutral_VagabondLeader=1000
+jungleLib.creepDifficulty.Neutral_Vulture=1000
+
+--Units that make the hard camp bad to go back to:
+jungleLib.creepDifficulty.Neutral_Goat=-100
+jungleLib.creepDifficulty.Neutral_Catman=-100
+jungleLib.creepDifficulty.Neutral_VagabondAssassin=-100
+jungleLib.creepDifficulty.Neutral_HunterWarrior=-100
+jungleLib.creepDifficulty.Neutral_SkeletonBoss=-100
+jungleLib.creepDifficulty.Neutral_WolfCommander=-100
+jungleLib.creepDifficulty.Neutral_Screacher=-100
+jungleLib.creepDifficulty.Neutral_Skeleton=-100
+jungleLib.creepDifficulty.Neutral_SkeletonBoss=-100
+
 ----------------------------------------------------
 --                Alchemists bones                --
 ----------------------------------------------------
 --When near a camp, check it to use alchemists bones on it
+local vecNearestHardCamp
+local nNearestCamp
 local function AlchemistsBonesUtility(botBrain)
-	if (not core.itemAlchBones or core.itemAlchBones:GetCharges()==0) return 0 end
-	vecNearestHardCamp=jungleLib.getNearestCampPos(vecMyPos, 90, 200)
-	
-	if (Vector3.Distance2DSq(core.unitSelf:GetPosition(), core.allyWell and core.allyWell:GetPosition() or behaviorLib.PositionSelfBackUp())<400*400 and core.unitSelf:GetManaPercent()*100<95) then return 80 end
-	return object.HealAtWellUtilityOld(botBrain)*1.75+(botBrain:GetGold()*8/2000)+ 8-(core.unitSelf:GetManaPercent()*8) --couragously flee back to base.
+	local unitSelf = core.unitSelf
+	if (not core.itemAlchBones or core.itemAlchBones:GetCharges()==0)then return 0 end
+	vecNearestHardCamp,nNearestCamp=jungleLib.getNearestCampPos(unitSelf:GetPosition(), 90, 9999)
+	if (not vecNearestHardCamp) then --bruteforce mode. We killed all the good camps.
+		vecNearestHardCamp,nNearestCamp=jungleLib.getNearestCampPos(unitSelf:GetPosition(), -120, 9999)
+	end
+	if (vecNearestHardCamp) then
+		core.DrawDebugArrow(unitSelf:GetPosition(), vecNearestHardCamp, 'yellow')
+		return 23
+	else
+		return 0
+	end
 end
 local function AlchemistsBonesExecute(botBrain)
-	local vecWellPos = core.allyWell and core.allyWell:GetPosition() or behaviorLib.PositionSelfBackUp()
+	local unitSelf = core.unitSelf
 	local vecMyPos=core.unitSelf:GetPosition()
-	if (Vector3.Distance2DSq(vecMyPos, vecWellPos)>600*600)then
-		if (skills.abilWaveForm:CanActivate()) then --waveform
-			return core.OrderAbilityPosition(botBrain, skills.abilWaveForm, positionOffset(core.unitSelf:GetPosition(), atan2(vecWellPos.y-vecMyPos.y,vecWellPos.x-vecMyPos.x), skills.abilWaveForm:GetRange()-100))
+	local vecTarget=jungleLib.jungleSpots[nNearestCamp].outsidePos
+	
+	--walk to target camp
+	if ( Vector3.Distance2DSq(vecMyPos, vecTarget)>100*100 ) then
+		return core.OrderMoveToPosAndHoldClamp(botBrain, unitSelf, vecTarget, false)
+	else--we are finally at a good camp!
+		local tUnits = HoN.GetUnitsInRadius(vecMyPos, 800, core.UNIT_MASK_ALIVE + core.UNIT_MASK_UNIT)
+		if tUnits then
+			-- Find the strongest unit in the camp
+			local nHighestHealth = 0
+			local unitStrongest = nil
+			for _, unitTarget in pairs(tUnits) do
+				if unitTarget:GetHealth() > nHighestHealth and unitTarget:IsAlive() then
+					unitStrongest = unitTarget
+					nHighestHealth = unitTarget:GetMaxHealth()
+				end
+			end
+			if unitStrongest and unitStrongest:GetPosition() then
+				return core.OrderItemEntityClamp(botBrain, unitSelf, core.itemAlchBones, unitStrongest, false)
+			else
+				return core.OrderMoveToPosAndHoldClamp(botBrain, unitSelf, vecTarget)
+			end
 		end
 	end
-	return object.HealAtWellExecuteOld(botBrain)
+	return false
 end
-behaviorLib.HealAtWellBehavior["Utility"] = AlchemistsBonesUtility
-behaviorLib.HealAtWellBehavior["Execute"] = AlchemistsBonesExecute
---]]
+
+behaviorLib.AlchemistsBonesBehavior = {}
+behaviorLib.AlchemistsBonesBehavior["Utility"] = AlchemistsBonesUtility
+behaviorLib.AlchemistsBonesBehavior["Execute"] = AlchemistsBonesExecute
+behaviorLib.AlchemistsBonesBehavior["Name"] = "UseAlchemistsBones"
+tinsert(behaviorLib.tBehaviors, behaviorLib.AlchemistsBonesBehavior)
+
+
 
 --------------------------------------------
 --          PushExecute Override          --
