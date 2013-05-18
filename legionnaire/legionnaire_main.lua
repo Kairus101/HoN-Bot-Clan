@@ -64,8 +64,7 @@ runfile "bots/behaviorLib.lua"
 
 runfile "bots/advancedShopping.lua"
 local shopping = object.shoppingHandler
-shopping.Setup(true, true, false, false, false, false)
-shopping.PreGameWaiting=false
+shopping.Setup(true, true, false, true)
 
 runfile "bots/jungleLib.lua"
 local jungleLib = object.jungleLib
