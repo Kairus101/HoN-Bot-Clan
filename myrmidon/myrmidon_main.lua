@@ -14,7 +14,8 @@
 --       DarkFire       VHD       Kairus101      --
 ---------------------------------------------------
 
---Urgent: load error syntax issue? (Don't know what you mean.. fixed?)
+--BUG: Myrm stalled out - no movement, sitting in lane safe away from any units.  Yellow arrow to jungle camps still toggling.  Courier was dead...
+--		Perhaps trying to buy on non-existant courier??
 
 --Proposed TO-DO list
 --	Items:
@@ -34,7 +35,8 @@
 --  Harass behavior
 --		Weed:
 --			Test/refine target's location prediction?  Currently using Stolen's RA meteor code, but only tracks current target...
---			If carp active, track target and carp locations.  Estimate intercept and cast weed field so that it triggers at time/location of carp intercept
+--			If carp active, track target and carp locations.  Estimate intercept and cast weed field so that it triggers at time/location of carp intercept?
+--			If target is stunned/slowed/snared/etc, boost aggression on weed?  Easy to land if target not moving!
 --		Carp:
 --			Cast on targets out of attack range that have HP pot on
 --			Set up thresholds/sequence to cast before weed when possible (allow setup synergy for better chance of landing weed field)
@@ -153,8 +155,8 @@ object.nForcedEvolutionUse = 20
 
 -- Thresholds of aggression the bot must reach to use these abilities
 object.nWeedFieldThreshold = 45
-object.nMagicCarpThreshold = 0
-object.nWaveFormThreshold = 100
+object.nMagicCarpThreshold = 0 -- 0??
+object.nWaveFormThreshold = 70 -- was 100
 object.nWaveFormRetreatThreshold = 50
 object.nForcedEvolutionThreshold = 60
 
@@ -282,22 +284,26 @@ function object:onthinkOverride(tGameVariables)
 	local itemSteamboots = core.itemSteamboots
 	if itemSteamboots and itemSteamboots:CanActivate() then
 		local unitSelf = core.unitSelf
+		local vecMyPos=core.unitSelf:GetPosition()
+		local vecWellPos = core.allyWell and core.allyWell:GetPosition()
+		local bHealingInWell = false
+		if (Vector3.Distance2DSq(vecMyPos, vecWellPos)<800*800) then bHealingInWell = true end
+
 		local sKey = itemSteamboots:GetActiveModifierKey()
 		local sCurrentBehavior = core.GetCurrentBehaviorName(self)
 		if sKey == "str" then
 			-- Toggle away from STR if health is high enough
-			if unitSelf:GetHealthPercent() > .65 or sCurrentBehavior == "UseHealthRegen" or sCurrentBehavior == "UseManaRegen" then
+			if unitSelf:GetHealthPercent() > .65 or sCurrentBehavior == "UseHealthRegen" or sCurrentBehavior == "UseManaRegen" or bHealingInWell then
 				self:OrderItem(itemSteamboots.object, false)
 			end
 		elseif sKey == "agi" then
-			-- Toggle away from AGI when we're not using Regen items
-			
-			if sCurrentBehavior ~= "UseHealthRegen" and sCurrentBehavior ~= "UseManaRegen" and not unitSelf:HasState("State_RunesOfTheBlight") and not unitSelf:HasState("State_HealthPotion") then
+			-- Toggle away from AGI when we're not using Regen items or at well
+			if sCurrentBehavior ~= "UseHealthRegen" and sCurrentBehavior ~= "UseManaRegen" and not unitSelf:HasState("State_RunesOfTheBlight") and not unitSelf:HasState("State_HealthPotion") and not bHealingInWell then
 				self:OrderItem(itemSteamboots.object, false)
 			end
 		elseif sKey == "int" then
 			-- Toggle away from INT if health gets too low
-			if unitSelf:GetHealthPercent() < .45 or sCurrentBehavior == "UseHealthRegen" or sCurrentBehavior == "UseManaRegen" then
+			if unitSelf:GetHealthPercent() < .45 or sCurrentBehavior == "UseHealthRegen" or sCurrentBehavior == "UseManaRegen" or bHealingInWell then
 				self:OrderItem(itemSteamboots.object, false)
 			end
 		end
@@ -446,8 +452,8 @@ local function HarassHeroExecuteOverride(botBrain)
 	local nTargetDistanceSq = Vector3.Distance2DSq(vecMyPosition, vecTargetPosition)
 	local bCanSeeTarget = core.CanSeeUnit(botBrain, unitTarget)
 	
-	local nPredictField = 11 -- nCastTime = 1000 --can we extract this from ability/affector? casttime="500" and castactiontime="100" and impactdelay="1000"
-	local vecRelativeMov = relativeMovement("MyrmField", vecTargetPosition) * nPredictField
+	local nWeedFieldDelay = 1100 -- nCastTime = 1000 --can we extract this from ability/affector? casttime="500" and castactiontime="100" and impactdelay="1000"
+	local vecRelativeMov = relativeMovement("MyrmField", vecTargetPosition) * (nWeedFieldDelay / 100) --updating every 100ms
 
 	local nLastHarassUtility = behaviorLib.lastHarassUtil
 	local bActionTaken = false
@@ -457,57 +463,84 @@ local function HarassHeroExecuteOverride(botBrain)
 	
 	--Weed Field
 	--Currently trying to use Stolen's Ra prediction code.  Consider reworking and track all old hero positions?
-	--vecTargetPredictPosition = vecTargetPosition + (Vector3.Normalize(vecTargetPosition - vecTargetOldPosition) * nMovespeed * (nCastTime / 1000) )
+	--Should we check bCanSeeTarget ?
 	if not bActionTaken then
 		local bDebugEchoes = true
 		local abilWeedField = skills.abilWeedField
-		local nRange = abilWeedField:GetRange()
-		local nMovespeed = unitSelf:GetMoveSpeed()
+		local nCarpMovespeed = 600 --extract this from ability file??
 		
 		if abilWeedField:CanActivate() and nLastHarassUtility > object.nWeedFieldThreshold then
 			local vecTargetPredictPosition = vecTargetPosition + vecRelativeMov
+			local nRange = abilWeedField:GetRange()
 			if(Vector3.Distance2DSq(vecMyPosition, vecTargetPredictPosition) < nRange * nRange) then
 				if not bTrackingCarp then
 					bActionTaken = core.OrderAbilityPosition(botBrain, skills.abilWeedField, vecTargetPredictPosition)
 					if(bDebugEchoes) then BotEcho("Casting weed field!") end
-				--elseif (nCastTime) < (est time for carp to reach vecTargetPredictPosition) then --perfect time to cast weed field!
-				--	bActionTaken = core.OrderAbilityPosition(botBrain, skills.abilWeedField, vecTargetPredictPosition)
+				-- If carp homing on target, wait till it gets close?
+				elseif (nWeedFieldDelay*nWeedFieldDelay / (1000*1000)) < (Vector3.Distance2DSq(uCarpTarget:GetPosition(), vecTargetPredictPosition) / (nCarpMovespeed*nCarpMovespeed)) then --perfect time to cast weed field!
+					bActionTaken = core.OrderAbilityPosition(botBrain, skills.abilWeedField, vecTargetPredictPosition)
 				end
 			end
 		end
 		
 		if(bDebugEchoes) then
-			core.DrawXPosition(vecTargetPosition + vecRelativeMov, 'purple', 100) --vecTargetPredictPosition
+			local nRange = abilWeedField:GetRange()
+			core.DrawXPosition(vecTargetPosition + vecRelativeMov, 'red', 100) --vecTargetPredictPosition
 			core.DrawDebugArrow(vecTargetPosition, vecTargetPosition + vecRelativeMov, 'red') --predicted target movement path
 			core.DrawDebugArrow(vecMyPosition, vecMyPosition + (Vector3.Normalize((vecTargetPosition + vecRelativeMov) - vecMyPosition)) * nRange, 'green') --weed field range aimed at predicted position
 		end
 	end
-	
+
 	--Magic Carp
-	if not bActionTaken then
+	if not bActionTaken and bCanSeeTarget then
 		local abilMagicCarp = skills.abilMagicCarp
 		if abilMagicCarp:CanActivate() and bCanSeeTarget and nLastHarassUtility > object.nMagicCarpThreshold then
-			bActionTaken = core.OrderAbilityEntity(botBrain, skills.abilMagicCarp, unitTarget)
-			if (bActionTaken) then
-				uCarpTarget=unitTarget
-				bTrackingCarp=true
+			local nRange = abilMagicCarp:GetRange()
+			if nTargetDistanceSq < (nRange * nRange) then
+				bActionTaken = core.OrderAbilityEntity(botBrain, skills.abilMagicCarp, unitTarget)
+				if (bActionTaken) then
+					uCarpTarget=unitTarget
+					bTrackingCarp=true
+				end
 			end
 		end
 	end
 	
 	--Wave Form
 	if not bActionTaken then
+		local bDebugEchoes = true
 		local abilWaveForm = skills.abilWaveForm
-		if abilWaveForm:CanActivate() and nLastHarassUtility > object.nWaveFormThreshold then
-			bActionTaken = core.OrderAbilityPosition(botBrain, skills.abilWaveForm, vecTargetPosition)
+
+		if abilWaveForm:CanActivate() and nLastHarassUtility > object.nWaveFormThreshold and bCanSeeTarget then
+			local nRange = abilWaveForm:GetRange()
+			local nWaveOvershoot = 100 --try to get this many units past target to guarantee slow and position nicely to ult or block
+			local vecWaveFormTarget = vecTargetPosition + nWaveOvershoot * Vector3.Normalize(vecTargetPosition - vecMyPosition)
+			if Vector3.Distance2DSq(vecMyPosition, vecWaveFormTarget) < (nRange * nRange) then
+				bActionTaken = core.OrderAbilityPosition(botBrain, skills.abilWaveForm, vecWaveFormTarget)
+			else
+				bActionTaken = core.OrderAbilityPosition(botBrain, skills.abilWaveForm, vecTargetPosition)
+			end
+		end
+		if(bDebugEchoes and bCanSeeTarget) then
+			local nRange = abilWaveForm:GetRange()
+			local nWaveOvershoot = 100
+			local vecWaveFormTarget = vecTargetPosition + nWaveOvershoot * Vector3.Normalize(vecTargetPosition - vecMyPosition)
+			if Vector3.Distance2DSq(vecMyPosition, vecWaveFormTarget) < (nRange * nRange) then
+				core.DrawXPosition(vecWaveFormTarget, 'blue', 100)
+			else 
+				core.DrawXPosition(vecMyPosition + Vector3.Normalize(vecTargetPosition - vecMyPosition) * nRange, 'blue', 100)
+			end
 		end
 	end
 	
 	--ForcedEvolution
-	if not bActionTaken then
+	--Need to check that target is not magic immune or our melee attack will not be effective?
+	if not bActionTaken and bCanSeeTarget then
 		local abilForcedEvolution = skills.abilForcedEvolution
 		if abilForcedEvolution:CanActivate() and nLastHarassUtility > object.nForcedEvolutionThreshold then
-			bActionTaken = core.OrderAbility(botBrain, skills.abilForcedEvolution)
+			if Vector3.Distance2DSq(vecMyPosition, vecTargetPosition) < (200 * 200) then --near melee range? (prevent losing the kill due to switching to melee form when target is far away!)
+				bActionTaken = core.OrderAbility(botBrain, skills.abilForcedEvolution)
+			end
 		end
 	end
 	
@@ -996,6 +1029,8 @@ local function funcRetreatFromThreatExecuteOverride(botBrain)
 			end
 		end
 		
+		--Activate ult if HP < ??% and retreating
+		
 		if behaviorLib.lastRetreatUtil> object.nWaveFormRetreatThreshold and waveFormToBase(botBrain) then return true end
 		
 	end
@@ -1061,6 +1096,7 @@ local function AlchemistsBonesUtility(botBrain)
 		return 0
 	end
 end
+
 local function AlchemistsBonesExecute(botBrain)
 	local unitSelf = core.unitSelf
 	local vecMyPos=core.unitSelf:GetPosition()
@@ -1096,7 +1132,6 @@ behaviorLib.AlchemistsBonesBehavior["Utility"] = AlchemistsBonesUtility
 behaviorLib.AlchemistsBonesBehavior["Execute"] = AlchemistsBonesExecute
 behaviorLib.AlchemistsBonesBehavior["Name"] = "UseAlchemistsBones"
 tinsert(behaviorLib.tBehaviors, behaviorLib.AlchemistsBonesBehavior)
-
 
 
 --------------------------------------------
