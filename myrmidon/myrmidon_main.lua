@@ -14,7 +14,7 @@
 --       DarkFire       VHD       Kairus101      --
 ---------------------------------------------------
 
---Urgent: load error syntax issue?
+--Urgent: load error syntax issue? (Don't know what you mean.. fixed?)
 
 --Proposed TO-DO list
 --	Items:
@@ -23,7 +23,7 @@
 --			I propose adding Lex Talionis after red boots and chalice. Provides magic armor and nice damage amp to burst skills
 --			Consider adding grimoire/lightbrand for boosted magic dmg?  Maybe insanitarious for stronger attacks in ult form?
 --			Add BKB for late game so we can fight in ult form up close without getting stunned/nuked?
---		Chalice, use whenever we have > 80%(?) hp but < 60%(?) mana.  (and when target is about to die, as suggested!)
+--		Chalice, use whenever we have > 80%(?) hp but < 60%(?) mana.
 
 --  Retreat behavior
 --		Ult if about to die (for +hp)
@@ -154,7 +154,8 @@ object.nForcedEvolutionUse = 20
 -- Thresholds of aggression the bot must reach to use these abilities
 object.nWeedFieldThreshold = 45
 object.nMagicCarpThreshold = 0
-object.nWaveFormThreshold = 95
+object.nWaveFormThreshold = 100
+object.nWaveFormRetreatThreshold = 50
 object.nForcedEvolutionThreshold = 60
 
 -- Other variables
@@ -213,7 +214,7 @@ local function funcFindItemsOverride(botBrain)
 	end
 	
 	if bUpdated then
-		if core.itemManaBattery and core.itemSteamboots and core.itemBloodChalice then
+		if core.itemManaBattery and core.itemSteamboots and core.itemBloodChalice and core.itemAlchBones then
 			return
 		end
 
@@ -995,7 +996,7 @@ local function funcRetreatFromThreatExecuteOverride(botBrain)
 			end
 		end
 		
-		if waveFormToBase(botBrain) then return true end
+		if behaviorLib.lastRetreatUtil> object.nWaveFormRetreatThreshold and waveFormToBase(botBrain) then return true end
 		
 	end
 	return core.OrderMoveToPosClamp(botBrain, core.unitSelf, vecPos, false)

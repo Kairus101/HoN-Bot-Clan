@@ -64,6 +64,7 @@ runfile "bots/behaviorLib.lua"
 
 runfile "bots/advancedShopping.lua"
 local shopping = object.shoppingHandler
+----shopping.Setup(bReserveItems, bSkipLaneWaiting, bCourierCare, bBuyConsumables, tConsumableOptions)
 shopping.Setup(true, true, false, true)
 
 runfile "bots/jungleLib.lua"
