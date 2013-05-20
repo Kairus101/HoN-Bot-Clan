@@ -17,6 +17,9 @@
 --BUG: Myrm stalled out - no movement, sitting in lane safe away from any units.  Yellow arrow to jungle camps still toggling.  Courier was dead...
 --		Perhaps trying to buy on non-existant courier??
 
+-- NOTE: bCanSeeTarget in HarassHeroExecute only needs to be checked if we are using OrderAbilityEntity or OrderItemEntity
+-- Note2: I reverted the Steamboots change because the well provides 4% of your max mana/health per second so switching to agi has no effect
+
 --Proposed TO-DO list
 --	Items:
 --		Refine item choices
@@ -130,7 +133,6 @@ behaviorLib.LateItems =
 	--"Lightning2 is charged hammer. More attack speed, right?
 	--harkons, solid all round.
 	--heart, because we need tankyness now.
-
 
 -- Skillbuild. 0 is Weed Field, 1 is Magic Carp, 2 is Wave Form, 3 is Forced Evolution, 4 is Attributes
 object.tSkills = {
@@ -284,31 +286,27 @@ function object:onthinkOverride(tGameVariables)
 	local itemSteamboots = core.itemSteamboots
 	if itemSteamboots and itemSteamboots:CanActivate() then
 		local unitSelf = core.unitSelf
-		local vecMyPos=core.unitSelf:GetPosition()
-		local vecWellPos = core.allyWell and core.allyWell:GetPosition()
-		local bHealingInWell = false
-		if (Vector3.Distance2DSq(vecMyPos, vecWellPos)<800*800) then bHealingInWell = true end
-
 		local sKey = itemSteamboots:GetActiveModifierKey()
 		local sCurrentBehavior = core.GetCurrentBehaviorName(self)
 		if sKey == "str" then
 			-- Toggle away from STR if health is high enough
-			if unitSelf:GetHealthPercent() > .65 or sCurrentBehavior == "UseHealthRegen" or sCurrentBehavior == "UseManaRegen" or bHealingInWell then
+			if unitSelf:GetHealthPercent() > .65 or sCurrentBehavior == "UseHealthRegen" or sCurrentBehavior == "UseManaRegen" then
 				self:OrderItem(itemSteamboots.object, false)
 			end
 		elseif sKey == "agi" then
 			-- Toggle away from AGI when we're not using Regen items or at well
-			if sCurrentBehavior ~= "UseHealthRegen" and sCurrentBehavior ~= "UseManaRegen" and not unitSelf:HasState("State_RunesOfTheBlight") and not unitSelf:HasState("State_HealthPotion") and not bHealingInWell then
+			if sCurrentBehavior ~= "UseHealthRegen" and sCurrentBehavior ~= "UseManaRegen" and not unitSelf:HasState("State_RunesOfTheBlight") and not unitSelf:HasState("State_HealthPotion") then
 				self:OrderItem(itemSteamboots.object, false)
 			end
 		elseif sKey == "int" then
 			-- Toggle away from INT if health gets too low
-			if unitSelf:GetHealthPercent() < .45 or sCurrentBehavior == "UseHealthRegen" or sCurrentBehavior == "UseManaRegen" or bHealingInWell then
+			if unitSelf:GetHealthPercent() < .45 or sCurrentBehavior == "UseHealthRegen" or sCurrentBehavior == "UseManaRegen" then
 				self:OrderItem(itemSteamboots.object, false)
 			end
 		end
 	end
 end
+
 object.onthinkOld = object.onthink
 object.onthink = object.onthinkOverride
 
@@ -370,8 +368,9 @@ end
 
 behaviorLib.CustomHarassUtility = CustomHarassUtilityFnOverride
 
-
-
+----------------------------------------
+--          Weed Field Logic          --
+----------------------------------------
 
 -- A fixed list seems to be better then to check on each cycle if its  exist
 -- so we create it here
@@ -385,6 +384,7 @@ local function createRelativeMovementTable(key)
 	}
 --	BotEcho('Created a relative movement table for: '..tRelativeMovements[key].timestamp)
 end
+
 createRelativeMovementTable("MyrmField") -- for landing Weed Field
 
 -- tracks movement for targets based on a list, so its reusable
@@ -434,9 +434,9 @@ local function relativeMovement(sKey, vTargetPos)
 	return tRelativeMovements[key].vRelMov
 end
 
-----------------------------------------
---          Harass Behaviour          --
-----------------------------------------
+---------------------------------------
+--          Harass Behavior          --
+---------------------------------------
 
 local function HarassHeroExecuteOverride(botBrain)
 	
@@ -457,33 +457,33 @@ local function HarassHeroExecuteOverride(botBrain)
 
 	local nLastHarassUtility = behaviorLib.lastHarassUtil
 	local bActionTaken = false
-	if (core.itemBloodChalice and core.itemBloodChalice:CanActivate() and unitTarget:GetHealthPercent() <= .15) then
+	
+	-- Blood Chalice
+	if core.itemBloodChalice and core.itemBloodChalice:CanActivate() and unitTarget:GetHealthPercent() <= .15 then
 		botBrain:OrderItem(core.itemBloodChalice.object or core.itemBloodChalice, false)
 	end
 	
 	--Weed Field
 	--Currently trying to use Stolen's Ra prediction code.  Consider reworking and track all old hero positions?
-	--Should we check bCanSeeTarget ?
 	if not bActionTaken then
 		local bDebugEchoes = true
 		local abilWeedField = skills.abilWeedField
-		local nCarpMovespeed = 600 --extract this from ability file??
-		
 		if abilWeedField:CanActivate() and nLastHarassUtility > object.nWeedFieldThreshold then
-			local vecTargetPredictPosition = vecTargetPosition + vecRelativeMov
 			local nRange = abilWeedField:GetRange()
-			if(Vector3.Distance2DSq(vecMyPosition, vecTargetPredictPosition) < nRange * nRange) then
+			if nTargetDistanceSq < nRange * nRange then
+				local nCarpMovespeedSq = 600 * 600
+				local vecTargetPredictPosition = vecTargetPosition + vecRelativeMov
 				if not bTrackingCarp then
 					bActionTaken = core.OrderAbilityPosition(botBrain, skills.abilWeedField, vecTargetPredictPosition)
-					if(bDebugEchoes) then BotEcho("Casting weed field!") end
+					if bDebugEchoes then BotEcho("Casting weed field!") end
 				-- If carp homing on target, wait till it gets close?
-				elseif (nWeedFieldDelay*nWeedFieldDelay / (1000*1000)) < (Vector3.Distance2DSq(uCarpTarget:GetPosition(), vecTargetPredictPosition) / (nCarpMovespeed*nCarpMovespeed)) then --perfect time to cast weed field!
+				elseif ((nWeedFieldDelay * nWeedFieldDelay) / (1000 * 1000)) < (Vector3.Distance2DSq(uCarpTarget:GetPosition(), vecTargetPredictPosition) / nCarpMovespeedSq) then --perfect time to cast weed field!
 					bActionTaken = core.OrderAbilityPosition(botBrain, skills.abilWeedField, vecTargetPredictPosition)
 				end
 			end
 		end
 		
-		if(bDebugEchoes) then
+		if bDebugEchoes then
 			local nRange = abilWeedField:GetRange()
 			core.DrawXPosition(vecTargetPosition + vecRelativeMov, 'red', 100) --vecTargetPredictPosition
 			core.DrawDebugArrow(vecTargetPosition, vecTargetPosition + vecRelativeMov, 'red') --predicted target movement path
@@ -492,15 +492,15 @@ local function HarassHeroExecuteOverride(botBrain)
 	end
 
 	--Magic Carp
-	if not bActionTaken and bCanSeeTarget then
+	if not bActionTaken then
 		local abilMagicCarp = skills.abilMagicCarp
 		if abilMagicCarp:CanActivate() and bCanSeeTarget and nLastHarassUtility > object.nMagicCarpThreshold then
 			local nRange = abilMagicCarp:GetRange()
 			if nTargetDistanceSq < (nRange * nRange) then
 				bActionTaken = core.OrderAbilityEntity(botBrain, skills.abilMagicCarp, unitTarget)
-				if (bActionTaken) then
-					uCarpTarget=unitTarget
-					bTrackingCarp=true
+				if bActionTaken then
+					uCarpTarget = unitTarget
+					bTrackingCarp = true
 				end
 			end
 		end
@@ -510,8 +510,7 @@ local function HarassHeroExecuteOverride(botBrain)
 	if not bActionTaken then
 		local bDebugEchoes = true
 		local abilWaveForm = skills.abilWaveForm
-
-		if abilWaveForm:CanActivate() and nLastHarassUtility > object.nWaveFormThreshold and bCanSeeTarget then
+		if abilWaveForm:CanActivate() and nLastHarassUtility > object.nWaveFormThreshold then
 			local nRange = abilWaveForm:GetRange()
 			local nWaveOvershoot = 100 --try to get this many units past target to guarantee slow and position nicely to ult or block
 			local vecWaveFormTarget = vecTargetPosition + nWaveOvershoot * Vector3.Normalize(vecTargetPosition - vecMyPosition)
@@ -521,11 +520,12 @@ local function HarassHeroExecuteOverride(botBrain)
 				bActionTaken = core.OrderAbilityPosition(botBrain, skills.abilWaveForm, vecTargetPosition)
 			end
 		end
-		if(bDebugEchoes and bCanSeeTarget) then
+	
+		if bDebugEchoes then
 			local nRange = abilWaveForm:GetRange()
 			local nWaveOvershoot = 100
 			local vecWaveFormTarget = vecTargetPosition + nWaveOvershoot * Vector3.Normalize(vecTargetPosition - vecMyPosition)
-			if Vector3.Distance2DSq(vecMyPosition, vecWaveFormTarget) < (nRange * nRange) then
+			if nDistanceTargetSq < (nRange * nRange) then
 				core.DrawXPosition(vecWaveFormTarget, 'blue', 100)
 			else 
 				core.DrawXPosition(vecMyPosition + Vector3.Normalize(vecTargetPosition - vecMyPosition) * nRange, 'blue', 100)
@@ -537,14 +537,12 @@ local function HarassHeroExecuteOverride(botBrain)
 	--Need to check that target is not magic immune or our melee attack will not be effective?
 	if not bActionTaken and bCanSeeTarget then
 		local abilForcedEvolution = skills.abilForcedEvolution
-		if abilForcedEvolution:CanActivate() and nLastHarassUtility > object.nForcedEvolutionThreshold then
-			if Vector3.Distance2DSq(vecMyPosition, vecTargetPosition) < (200 * 200) then --near melee range? (prevent losing the kill due to switching to melee form when target is far away!)
-				bActionTaken = core.OrderAbility(botBrain, skills.abilForcedEvolution)
-			end
+		if abilForcedEvolution:CanActivate() and nLastHarassUtility > object.nForcedEvolutionThreshold and nTargetDistanceSq < (200 * 200) then
+			bActionTaken = core.OrderAbility(botBrain, skills.abilForcedEvolution)
 		end
 	end
 	
-	if (not bActionTaken) then
+	if not bActionTaken then
 		bActionTaken = object.harassExecuteOld(botBrain)
 	end
 
@@ -759,14 +757,12 @@ behaviorLib.UseManaRegenBehavior["Execute"] = behaviorLib.UseManaRegenExecute
 behaviorLib.UseManaRegenBehavior["Name"] = "UseManaRegen"
 tinsert(behaviorLib.tBehaviors, behaviorLib.UseManaRegenBehavior)
 
---------------------------------------------------
---    SoulReapers's Predictive Last Hitting Helper
---    
---    Assumes that you have vision on the creep
---    passed in to the function
---
---    Developed by paradox870
---------------------------------------------------
+-----------------------------------------------
+--          Predictive Last Hitting          --
+--                                           --
+--          Developed by paradox870          --
+-----------------------------------------------
+
 local function GetAttackDamageOnCreep(botBrain, unitCreepTarget)
 
 	if not unitCreepTarget or not core.CanSeeUnit(botBrain, unitCreepTarget) then
@@ -866,7 +862,7 @@ function GetCreepAttackTargetOverride(botBrain, unitEnemyCreep, unitAllyCreep) -
 
 	return nil
 end
--- overload the behaviour stock function with custom 
+
 object.getCreepAttackTargetOld = behaviorLib.GetCreepAttackTarget
 behaviorLib.GetCreepAttackTarget = GetCreepAttackTargetOverride
 
@@ -901,13 +897,14 @@ function AttackCreepsExecuteOverride(botBrain)
 		return object.AttackCreepsExecuteOld
 	end
 end
+
 object.AttackCreepsExecuteOld = behaviorLib.HarassHeroBehavior["Execute"]
 behaviorLib.AttackCreepsBehavior["Execute"] = AttackCreepsExecuteOverride
 
 --This function returns the position of the enemy hero.
 --If he is not shown on map it returns the last visible spot
 --as long as it is not older than 10s
-local function funcGetEnemyPosition (unitEnemy)
+local function funcGetEnemyPosition(unitEnemy)
 	if unitEnemy == nil  then return Vector3.Create(20000, 20000) end 
 	local tEnemyPosition = core.unitSelf.tEnemyPosition
 	local tEnemyPositionTimestamp = core.unitSelf.tEnemyPositionTimestamp
@@ -940,7 +937,7 @@ local function funcGetEnemyPosition (unitEnemy)
 	end
 end
 
-local function funcGetThreatOfEnemy (unitEnemy)
+local function funcGetThreatOfEnemy(unitEnemy)
 	if unitEnemy == nil or not unitEnemy:IsAlive() then return 0 end
 	local unitSelf = core.unitSelf
 	local nDistanceSq = Vector3.Distance2DSq(unitSelf:GetPosition(), funcGetEnemyPosition (unitEnemy))
@@ -954,9 +951,26 @@ local function funcGetThreatOfEnemy (unitEnemy)
 	return nThreat
 end
 
-------------------------------------------------------------------
---Retreat utility
-------------------------------------------------------------------
+--------------------------------------------------
+--          RetreatFromThreat Override          --
+--------------------------------------------------
+
+local function positionOffset(pos, angle, distance) --this is used by minions to form a ring around people.
+	tmp = Vector3.Create(cos(angle)*distance,sin(angle)*distance)
+	return tmp+pos
+end
+
+local function waveFormToBase(botBrain)
+	local vecWellPos = core.allyWell and core.allyWell:GetPosition() or behaviorLib.PositionSelfBackUp()
+	local vecMyPos=core.unitSelf:GetPosition()
+	if (Vector3.Distance2DSq(vecMyPos, vecWellPos)>600*600)then
+		if (skills.abilWaveForm:CanActivate()) then --waveform
+			return core.OrderAbilityPosition(botBrain, skills.abilWaveForm, positionOffset(core.unitSelf:GetPosition(), atan2(vecWellPos.y-vecMyPos.y,vecWellPos.x-vecMyPos.x), skills.abilWaveForm:GetRange()))
+		end
+	end
+	return false
+end
+
 local function CustomRetreatFromThreatUtilityFnOverride(botBrain)
 	local bDebugEchos = false
 	local nUtilityOld = behaviorLib.lastRetreatUtil
@@ -977,24 +991,6 @@ local function CustomRetreatFromThreatUtilityFnOverride(botBrain)
 		nUtility = nUtility + funcGetThreatOfEnemy(enemy) / nAllies
 	end
 	return Clamp(nUtility, 0, 100)
-end
-object.RetreatFromThreatUtilityOld =  behaviorLib.RetreatFromThreatUtility
-behaviorLib.RetreatFromThreatBehavior["Utility"] = CustomRetreatFromThreatUtilityFnOverride
-
-
-local function positionOffset(pos, angle, distance) --this is used by minions to form a ring around people.
-	tmp = Vector3.Create(cos(angle)*distance,sin(angle)*distance)
-	return tmp+pos
-end
-local function waveFormToBase(botBrain)
-	local vecWellPos = core.allyWell and core.allyWell:GetPosition() or behaviorLib.PositionSelfBackUp()
-	local vecMyPos=core.unitSelf:GetPosition()
-	if (Vector3.Distance2DSq(vecMyPos, vecWellPos)>600*600)then
-		if (skills.abilWaveForm:CanActivate()) then --waveform
-			return core.OrderAbilityPosition(botBrain, skills.abilWaveForm, positionOffset(core.unitSelf:GetPosition(), atan2(vecWellPos.y-vecMyPos.y,vecWellPos.x-vecMyPos.x), skills.abilWaveForm:GetRange()))
-		end
-	end
-	return false
 end
 
 local function funcRetreatFromThreatExecuteOverride(botBrain)
@@ -1037,48 +1033,59 @@ local function funcRetreatFromThreatExecuteOverride(botBrain)
 	return core.OrderMoveToPosClamp(botBrain, core.unitSelf, vecPos, false)
 end
 
+object.RetreatFromThreatUtilityOld =  behaviorLib.RetreatFromThreatUtility
+behaviorLib.RetreatFromThreatBehavior["Utility"] = CustomRetreatFromThreatUtilityFnOverride
 object.RetreatFromThreatExecuteOld = behaviorLib.RetreatFromThreatExecute
 behaviorLib.RetreatFromThreatBehavior["Execute"] = funcRetreatFromThreatExecuteOverride
 
-----------------------------------------------------
---             Heal At Well Override              --
-----------------------------------------------------
+--------------------------------------------------
+--             HealAtWell Override              --
+--------------------------------------------------
+
 --return to well more often. --2000 gold adds 8 to return utility, 0% mana also adds 8.
 --When returning to well, use skills and items.
 local function HealAtWellUtilityOverride(botBrain)
 	return object.HealAtWellUtilityOld(botBrain)*1.75+(botBrain:GetGold()*8/2000)+ 8-(core.unitSelf:GetManaPercent()*8) --couragously flee back to base.
 end
+
 local function HealAtWellExecuteOverride(botBrain)
 	return waveFormToBase(botBrain) or object.HealAtWellExecuteOld(botBrain)
 end
+
 object.HealAtWellUtilityOld = behaviorLib.HealAtWellBehavior["Utility"]
-object.HealAtWellExecuteOld = behaviorLib.HealAtWellBehavior["Execute"]
 behaviorLib.HealAtWellBehavior["Utility"] = HealAtWellUtilityOverride
+object.HealAtWellExecuteOld = behaviorLib.HealAtWellBehavior["Execute"]
 behaviorLib.HealAtWellBehavior["Execute"] = HealAtWellExecuteOverride
 
-jungleLib.jungleSpots[6].difficulty=10000
-jungleLib.jungleSpots[12].difficulty=10000
+----------------------------------------
+--          Jungle Variables          --
+----------------------------------------
+
+jungleLib.jungleSpots[6].difficulty = 10000
+jungleLib.jungleSpots[12].difficulty = 10000
+
 --from here on, units we don't want for alch bones is negative a bit
 --Units we want to kill:
-jungleLib.creepDifficulty.Neutral_Minotaur=1000
-jungleLib.creepDifficulty.Neutral_Catman_leader=1000
-jungleLib.creepDifficulty.Neutral_VagabondLeader=1000
-jungleLib.creepDifficulty.Neutral_Vulture=1000
+jungleLib.creepDifficulty.Neutral_Minotaur = 1000
+jungleLib.creepDifficulty.Neutral_Catman_leader = 1000
+jungleLib.creepDifficulty.Neutral_VagabondLeader = 1000
+jungleLib.creepDifficulty.Neutral_Vulture = 1000
 
 --Units that make the hard camp bad to go back to:
-jungleLib.creepDifficulty.Neutral_Goat=-100
-jungleLib.creepDifficulty.Neutral_Catman=-100
-jungleLib.creepDifficulty.Neutral_VagabondAssassin=-100
-jungleLib.creepDifficulty.Neutral_HunterWarrior=-100
-jungleLib.creepDifficulty.Neutral_SkeletonBoss=-100
-jungleLib.creepDifficulty.Neutral_WolfCommander=-100
-jungleLib.creepDifficulty.Neutral_Screacher=-100
-jungleLib.creepDifficulty.Neutral_Skeleton=-100
-jungleLib.creepDifficulty.Neutral_SkeletonBoss=-100
+jungleLib.creepDifficulty.Neutral_Goat = -100
+jungleLib.creepDifficulty.Neutral_Catman = -100
+jungleLib.creepDifficulty.Neutral_VagabondAssassin = -100
+jungleLib.creepDifficulty.Neutral_HunterWarrior = -100
+jungleLib.creepDifficulty.Neutral_SkeletonBoss = -100
+jungleLib.creepDifficulty.Neutral_WolfCommander = -100
+jungleLib.creepDifficulty.Neutral_Screacher = -100
+jungleLib.creepDifficulty.Neutral_Skeleton = -100
+jungleLib.creepDifficulty.Neutral_SkeletonBoss = -100
 
 ----------------------------------------------------
 --                Alchemists bones                --
 ----------------------------------------------------
+
 --When near a camp, check it to use alchemists bones on it
 local vecNearestHardCamp
 local nNearestCamp
@@ -1132,7 +1139,6 @@ behaviorLib.AlchemistsBonesBehavior["Utility"] = AlchemistsBonesUtility
 behaviorLib.AlchemistsBonesBehavior["Execute"] = AlchemistsBonesExecute
 behaviorLib.AlchemistsBonesBehavior["Name"] = "UseAlchemistsBones"
 tinsert(behaviorLib.tBehaviors, behaviorLib.AlchemistsBonesBehavior)
-
 
 --------------------------------------------
 --          PushExecute Override          --
@@ -1280,7 +1286,6 @@ end
 
 object.TeamGroupBehaviorOld = behaviorLib.TeamGroupBehavior["Execute"]
 behaviorLib.TeamGroupBehavior["Execute"] = TeamGroupBehaviorOverride
-
 
 -----------------------------------
 --          Custom Chat          --
