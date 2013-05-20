@@ -470,7 +470,7 @@ local function HarassHeroExecuteOverride(botBrain)
 		local abilWeedField = skills.abilWeedField
 		if abilWeedField:CanActivate() and nLastHarassUtility > object.nWeedFieldThreshold then
 			local nRange = abilWeedField:GetRange()
-			if nTargetDistanceSq < nRange * nRange then
+			if Vector3.Distance2DSq(vecMyPosition, vecTargetPredictPosition) < nRange * nRange then
 				local nCarpMovespeedSq = 600 * 600
 				local vecTargetPredictPosition = vecTargetPosition + vecRelativeMov
 				if not bTrackingCarp then
@@ -525,7 +525,7 @@ local function HarassHeroExecuteOverride(botBrain)
 			local nRange = abilWaveForm:GetRange()
 			local nWaveOvershoot = 100
 			local vecWaveFormTarget = vecTargetPosition + nWaveOvershoot * Vector3.Normalize(vecTargetPosition - vecMyPosition)
-			if nTargetDistanceSq < (nRange * nRange) then
+			if Vector3.Distance2DSq(vecMyPosition, vecWaveFormTarget) < (nRange * nRange) then
 				core.DrawXPosition(vecWaveFormTarget, 'blue', 100)
 			else 
 				core.DrawXPosition(vecMyPosition + Vector3.Normalize(vecTargetPosition - vecMyPosition) * nRange, 'blue', 100)
