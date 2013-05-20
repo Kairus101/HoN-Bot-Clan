@@ -525,7 +525,7 @@ local function HarassHeroExecuteOverride(botBrain)
 			local nRange = abilWaveForm:GetRange()
 			local nWaveOvershoot = 100
 			local vecWaveFormTarget = vecTargetPosition + nWaveOvershoot * Vector3.Normalize(vecTargetPosition - vecMyPosition)
-			if nDistanceTargetSq < (nRange * nRange) then
+			if nTargetDistanceSq < (nRange * nRange) then
 				core.DrawXPosition(vecWaveFormTarget, 'blue', 100)
 			else 
 				core.DrawXPosition(vecMyPosition + Vector3.Normalize(vecTargetPosition - vecMyPosition) * nRange, 'blue', 100)
