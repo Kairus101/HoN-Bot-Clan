@@ -512,7 +512,7 @@ local function HarassHeroExecuteOverride(botBrain)
 		local abilWaveForm = skills.abilWaveForm
 		if abilWaveForm:CanActivate() and nLastHarassUtility > object.nWaveFormThreshold then
 			local nRange = abilWaveForm:GetRange()
-			local nWaveOvershoot = 100 --try to get this many units past target to guarantee slow and position nicely to ult or block
+			local nWaveOvershoot = 128 --try to get this many units past target to guarantee slow and position nicely to ult or block
 			local vecWaveFormTarget = vecTargetPosition + nWaveOvershoot * Vector3.Normalize(vecTargetPosition - vecMyPosition)
 			if Vector3.Distance2DSq(vecMyPosition, vecWaveFormTarget) < (nRange * nRange) then
 				bActionTaken = core.OrderAbilityPosition(botBrain, skills.abilWaveForm, vecWaveFormTarget)
@@ -523,7 +523,7 @@ local function HarassHeroExecuteOverride(botBrain)
 	
 		if bDebugEchoes then
 			local nRange = abilWaveForm:GetRange()
-			local nWaveOvershoot = 100
+			local nWaveOvershoot = 128
 			local vecWaveFormTarget = vecTargetPosition + nWaveOvershoot * Vector3.Normalize(vecTargetPosition - vecMyPosition)
 			if Vector3.Distance2DSq(vecMyPosition, vecWaveFormTarget) < (nRange * nRange) then
 				core.DrawXPosition(vecWaveFormTarget, 'blue', 100)
@@ -901,6 +901,10 @@ end
 object.AttackCreepsExecuteOld = behaviorLib.HarassHeroBehavior["Execute"]
 behaviorLib.AttackCreepsBehavior["Execute"] = AttackCreepsExecuteOverride
 
+--------------------------------------------------
+--          RetreatFromThreat Override          --
+--------------------------------------------------
+
 --This function returns the position of the enemy hero.
 --If he is not shown on map it returns the last visible spot
 --as long as it is not older than 10s
@@ -950,10 +954,6 @@ local function funcGetThreatOfEnemy(unitEnemy)
 	nThreat = Clamp(3*(112810000-nDistanceSq) / (4*(19*nDistanceSq+32810000)),0.75,2) * nThreat
 	return nThreat
 end
-
---------------------------------------------------
---          RetreatFromThreat Override          --
---------------------------------------------------
 
 local function positionOffset(pos, angle, distance) --this is used by minions to form a ring around people.
 	tmp = Vector3.Create(cos(angle)*distance,sin(angle)*distance)
