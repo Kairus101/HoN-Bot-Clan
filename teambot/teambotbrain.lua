@@ -942,6 +942,58 @@ end
 
 
 ---- Lane building ----
+
+--[[
+Add custom code to lane building function which takes into account each bot's preference to be in a given lane.
+This will allow teambotbrain to intelligently set up lanes and resolve competing preferences.
+If only pubs cooperated like this in TMM games!
+
+These are *optional* preferences which each individual bot can configure to reflect its code.
+
+Note:
+	"Jungle" is considered a lane.
+	"Short" = bot lane solo for legion, top for hellbourne
+	"Long" = top lane solo for legion, bot for hellbourne
+	Trilanes and dual mid lanes are not currently supported, but could be implemented in the future?
+
+Each bot can specify a preference for the following 8 lanes+role combinations:
+	Jungle (allied jungle only, I assume?)
+	Mid (solo?)
+	Short solo
+	Long solo
+	Short support (dual lane)
+	Short carry (dual lane)
+	Long support (dual lane)
+	Long carry (dual lane)
+
+Preference for the above lanes/roles can be ranked by a bot using the following scoring system:
+0 = impossible (only use if no code written to support it!)
+1 = bad
+2 = ok
+3 = decent
+4 = good
+5 = awsome
+
+Default values if left out of bot files:
+{ Jungle = 0, Mid = 2, ShortSolo = 2, LongSolo = 2, ShortSupport = 2, LongSupport = 2, ShortCarry = 2, LongCarry = 2 }
+
+Sample values for 'typical' bots:
+Empath: 	{ Jungle = 0, Mid = 1, ShortSolo = 1, LongSolo = 1, ShortSupport = 5, LongSupport = 5, ShortCarry = 1, LongCarry = 1 }
+Pebbles: 	{ Jungle = 0, Mid = 5, ShortSolo = 2, LongSolo = 1, ShortSupport = 1, LongSupport = 1, ShortCarry = 3, LongCarry = 3 }
+Legionaire:	{ Jungle = 5, Mid = 2, ShortSolo = 2, LongSolo = 1, ShortSupport = 1, LongSupport = 1, ShortCarry = 2, LongCarry = 2 }
+Plague: 	{ Jungle = 0, Mid = 2, ShortSolo = 4, LongSolo = 5, ShortSupport = 3, LongSupport = 4, ShortCarry = 2, LongCarry = 2 }
+
+
+Rough psuedo code ideas for calculating initial lane assignment:
+
+1) Scan team and import tables of bot preferences.  (If no table exists for a bot, fill it with default values).
+2) Scan bot preferences for valid jungler (Jungle > 2?) AND solo (ShortSolo > 3 OR LongSolo > 3?) and assign these lanes as appropriate
+3) Assign bot with highest mid preference to mid.  Range breaks ties?
+4) Assign lane support/carry as appropriate with secondary goal of splitting range/melee 
+5) Echo back to bots their lane assignments (purely to give bots a chance to select an item build appropriate for their lane)
+
+--]]
+
 object.nLaneProximityThreshold = 0.60 --how close you need to be (percentage-wise) to be "in" a lane
 
 object.lanePreference = {
