@@ -118,7 +118,7 @@ end
 object.onthinkOld = object.onthink
 object.onthink 	= object.onthinkOverride
 
-object.retreatCastThreshold = 40
+object.retreatCastThreshold = 55
 function behaviorLib.RetreatFromThreatExecuteOverride(botBrain)
 	local unitSelf = core.unitSelf
 	local mypos = unitSelf:GetPosition()
@@ -154,12 +154,9 @@ behaviorLib.RetreatFromThreatExecuteOld = behaviorLib.RetreatFromThreatBehavior[
 behaviorLib.RetreatFromThreatBehavior["Execute"] = behaviorLib.RetreatFromThreatExecuteOverride
 
 
-----------------------------------------------
+------------------------------------------
 --			oncombatevent override		--
--- use to check for infilictors (fe. buffs) --
-----------------------------------------------
--- @param: eventdata
--- @return: none
+------------------------------------------
 object.mesmeUseBonus = 5
 object.holdUseBonus = 35
 object.heartacheUseBonus = 15
@@ -274,6 +271,7 @@ behaviorLib.HarassHeroBehavior["Execute"] = HarassHeroExecuteOverride
 ----------------------
 -- Healing behavior --
 ----------------------
+behaviorLib.healFunc = nil
 
 function behaviorLib.newUseHealthRegenUtility(botBrain)
 	oldUtil = behaviorLib.oldUseHealthRegenUtility(botBrain)
@@ -294,16 +292,23 @@ function behaviorLib.newUseHealthRegenUtility(botBrain)
 	end
 
 	--Bottle
+	if oldUtil > heartacheUtil and oldUtil >= bottleUtil then
+		behaviorLib.healFunc = behaviorLib.oldUseHealthRegenExecute
+	elseif heartacheUtil >= bottleUtil then
+		behaviorLib.healFunc = behaviorLib.healHeartache
+	else
+		behaviorLib.healFunc = behaviorLib.bottleHeal
+	end
 	return max(oldUtil, heartacheUtil, bottleUtil)
 end
 behaviorLib.oldUseHealthRegenUtility = behaviorLib.UseHealthRegenBehavior["Utility"]
 behaviorLib.UseHealthRegenBehavior["Utility"] = behaviorLib.newUseHealthRegenUtility
 
-function behaviorLib.newUseHealthRegenExecute(botBrain)
-	bActionTaken = behaviorLib.oldUseHealthRegenExecute(botBrain)
-
+function behaviorLib.healHeartache(botBrain)
 	local unitSelf = core.unitSelf
 	local mypos = unitSelf:GetPosition()
+
+	local bActionTaken = false
 
 	local heartacheCanActivate = skills.heartache:CanActivate()
 	if not bActionTaken and heartacheCanActivate then
@@ -345,14 +350,18 @@ function behaviorLib.newUseHealthRegenExecute(botBrain)
 			end
 		end
 	end
-	--bottle
+	return bActionTaken
+end
 
-	if not bActionTaken and core.itemBottle and core.itemBottle:CanActivate() then
+function behaviorLib.bottleHeal(botBrain)
+	if core.itemBottle and core.itemBottle:CanActivate() then
 		object.bottle.drink(botBrain)
 	end
+	return false
+end
 
-
-	return bActionTaken
+function behaviorLib.newUseHealthRegenExecute(botBrain)
+	return behaviorLib.healFunc(botBrain)
 end
 
 behaviorLib.oldUseHealthRegenExecute = behaviorLib.UseHealthRegenBehavior["Execute"]

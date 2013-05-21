@@ -42,8 +42,10 @@ function bottle.drink(botBrain)
 	if bottle.haveBottle() and core.itemBottle:GetActiveModifierKey() ~= "bottle_empty" and core.itemBottle:CanActivate() then
 		if not core.unitSelf:HasState("State_Bottle") then
 			botBrain:OrderItem(core.itemBottle.object)
+			return true
 		end
 	end
+	return false
 end
 
 function bottle.getCharges()
