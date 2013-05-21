@@ -943,84 +943,65 @@ end
 
 ---- Lane building ----
 object.nLaneProximityThreshold = 0.60 --how close you need to be (percentage-wise) to be "in" a lane
+
+object.lanePreference = {
+	Mid = 0,
+	Top = 0,
+	Bottom = 0,
+	Jungle = 0,
+}
+
+object.lanePartnerPreference = { -- I don't like this variable name but i couldn't think of anything better
+	Support = 0,
+	SoloLong = 0,
+	SoloShort = 0,
+	TriLane = 0,
+}
+
 function object:BuildLanes()
 	local bDebugEchos = false
-	
-	--[[
-	if object.myName == "Team 2" then
-		bDebugEchos = true
-	end--]]
-	
+
 	local tTopLane = {}
 	local tMiddleLane = {}
 	local tBottomLane = {}
-	
+	local tJungle = {}
+
 	local nBots = core.NumberElements(self.tAllyBotHeroes)
 	local tBotsLeft = core.CopyTable(self.tAllyBotHeroes)
-	
-	--check for players already in lane
-	local nHumansInLane = 0
+
+	-- Check for players already in lane
+	local nHumansInTop = 0
+	local nHumansInMid = 0
+	local nHumansInBottom = 0
+	local nHumansInJungle = 0
 	for nID, unitHero in pairs(self.tAllyHumanHeroes) do
 		local vecPosition = unitHero:GetPosition()
 		if Vector3.Distance2DSq(vecPosition, core.allyWell:GetPosition()) > 1200*1200 then
 			local tLaneBreakdown = core.GetLaneBreakdown(unitHero)
-			
 			if tLaneBreakdown["mid"] >= self.nLaneProximityThreshold then
 				tMiddleLane[nID] = unitHero
-				nHumansInLane = nHumansInLane + 1
+				nHumansInLane = nHumansInMid + 1
 			elseif tLaneBreakdown["top"] >= self.nLaneProximityThreshold  then
 				tTopLane[nID] = unitHero
-				nHumansInLane = nHumansInLane + 1
+				nHumansInLane = nHumansInTop + 1
+				if false and core.myTeam == HoN.GetHellbourneTeam() then
+					-- HELLBOURNE JUNGLE CHECK IS HERE
+					tJungle[nID] = unitHero
+					nHumansInJungle = nHumansInJungle + 1
+				end
 			elseif tLaneBreakdown["bot"] >= self.nLaneProximityThreshold then
 				tBottomLane[nID] = unitHero
-				nHumansInLane = nHumansInLane + 1
+				nHumansInLane = nHumansInBottom + 1
+				if false and core.myTeam == HoN.GetLegionTeam() then
+					-- LEGION JUNGLE CHECK IS HERE
+					tJungle[nID] = unitHero
+					nHumansInJungle = nHumansInJungle + 1
+				end
 			end			
 		end
 	end
-	
-	if bDebugEchos then
-		BotEcho('Buildin Lanes!')
-		Echo('  Humans:')
-		self:PrintLanes(tTopLane, tMiddleLane, tBottomLane)		
-		BotEcho(format('nBots: %i, nHumansInLane: %i', nBots, nHumansInLane))
-	end
-	
-	--[[TEST: put particular bots in particular lanes	
-	local unitSpecialBot1 = nil
-	local unitSpecialBot2 = nil
-	local tLane = nil
-	local sName1 = nil
-	local sName2 = nil
-	
-	if core.myTeam == HoN.GetLegionTeam() then
-		tLane = tTopLane
-		sName1 = "Hero_ForsakenArcher"
-		sName2 = nil
-	else
-		tLane = tTopLane
-		sName1 = "Hero_Shaman"
-		sName2 = "Hero_Chronos"
-	end
-		
-	for nUID, unit in pairs(self.tAllyBotHeroes) do
-		if sName1 and unit:GetTypeName() == sName1 then
-			tLane[nUID] = unit
-			unitSpecialBot1 = unit
-		elseif sName2 and unit:GetTypeName() == sName2 then
-			tLane[nUID] = unit
-			unitSpecialBot2 = unit
-		end
-	end
-	
-	for nUID, unit in pairs(tBotsLeft) do
-		if unit == unitSpecialBot1 or unit == unitSpecialBot2 then
-			tBotsLeft[nUID] = nil
-			break
-		end
-	end	
-	--/TEST]]	
-	
-	--Tutorial
+
+	-- Tutorial
 	if core.bIsTutorial and core.myTeam == HoN.GetLegionTeam() then
 		if bDebugEchos then BotEcho("BuildLanes - Tutorial!") end
 		local unitSpecialBot = nil
@@ -1053,23 +1034,22 @@ function object:BuildLanes()
 			end	
 		end
 	end	
-	--/Tutorial
+	-- /Tutorial
 	
-	local tExposedLane = nil
-	local tSafeLane = nil
+	local tLongLane = nil
+	local tShortLane = nil
 	if core.myTeam == HoN.GetLegionTeam() then
-		tExposedLane = tTopLane
-		tSafeLane = tBottomLane
+		tLongLane = tTopLane
+		tShortLane = tBottomLane
 	else
-		tExposedLane = tBottomLane
-		tSafeLane = tTopLane
+		tLongLane = tBottomLane
+		tShortLane = tTopLane
 	end
-	
-	
+
 	--Lane Algorithm
 	local nEmptyLanes = core.NumberTablesEmpty(tTopLane, tMiddleLane, tBottomLane)
 	local nBotsLeft = core.NumberElements(tBotsLeft)
-	
+
 	--fill mid
 	if core.NumberElements(tMiddleLane) == 0 and core.NumberElements(tBotsLeft) > 0 then
 		local unitBestSolo = self.FindBestLaneSolo(tBotsLeft)
@@ -1079,42 +1059,42 @@ function object:BuildLanes()
 			tMiddleLane[nUID] = unitBestSolo
 		end
 	end
-	
+
 	nEmptyLanes = core.NumberTablesEmpty(tTopLane, tMiddleLane, tBottomLane)	
 	nBotsLeft = core.NumberElements(tBotsLeft)
-	
+
 	if bDebugEchos then BotEcho('nEmptyLanes: '..nEmptyLanes..'  nBotsLeft: '..nBotsLeft) end
-	
+
 	while nBotsLeft > 0 do
 		if nBotsLeft > nEmptyLanes then
 			if bDebugEchos then print('Filling a pair ') end
-			
+
 			--fill a pair, short lane before long lane
 			local tLaneToFill = nil
-			if core.NumberElements(tExposedLane) < 2 then
-				tLaneToFill = tExposedLane
-				if bDebugEchos then print(" in the Exposed lane\n") end
-			elseif core.NumberElements(tSafeLane) < 2 then
-				tLaneToFill = tSafeLane
-				if bDebugEchos then print(" in the Safe lane\n") end
+			if core.NumberElements(tLongLane) < 2 then
+				tLaneToFill = tLongLane
+				if bDebugEchos then print(" in the Long lane\n") end
+			elseif core.NumberElements(tShortLane) < 2 then
+				tLaneToFill = tShortLane
+				if bDebugEchos then print(" in the Short lane\n") end
 			else
 				BotEcho('Unable to find a lane to fill with a pair :/')
 			end
-			
+
 			if tLaneToFill then
 				local nInLane = core.NumberElements(tLaneToFill)
 				if nInLane == 1 then
 					--1 human
 					if bDebugEchos then BotEcho("Human in lane") end
-					
+
 					local unitHuman = nil
 					for _, unit in pairs(tLaneToFill) do
 						unitHuman = unit
 						break
 					end
-					
+
 					local unitBestBot = self.FindBestLaneComplement(unitHuman, tBotsLeft)
-					
+
 					if unitBestBot then
 						local nUID = unitBestBot:GetUniqueID()
 						tBotsLeft[nUID] = nil
@@ -1123,9 +1103,9 @@ function object:BuildLanes()
 				elseif nInLane == 0 then
 					--lane is empty
 					if bDebugEchos then BotEcho("Empty Lane") end
-					
+
 					local unitA, unitB = self.FindBestLanePair(tBotsLeft)
-					
+
 					if unitA and unitB then
 						local nIDForA = unitA:GetUniqueID()
 						local nIDForB = unitB:GetUniqueID()
@@ -1140,22 +1120,22 @@ function object:BuildLanes()
 			end
 		else
 			if bDebugEchos then print('Solo lane ') end
-			
+
 			--fill the remaining lanes with solos.  if we have 2 lanes to fill then fill short then long, else just long lane
 			local tLaneToFill = nil
 			if nEmptyLanes == 2 then
-				tLaneToFill = tExposedLane
-				if bDebugEchos then print(" in the Exposed lane\n") end
-			elseif core.NumberElements(tSafeLane) < 1 then
-				tLaneToFill = tSafeLane
-				if bDebugEchos then print(" in the Safe lane\n") end
-			elseif core.NumberElements(tExposedLane) < 1 then
-				tLaneToFill = tExposedLane
-				if bDebugEchos then print(" in the Exposed lane\n") end
+				tLaneToFill = tLongLane
+				if bDebugEchos then print(" in the Long lane\n") end
+			elseif core.NumberElements(tShortLane) < 1 then
+				tLaneToFill = tShortLane
+				if bDebugEchos then print(" in the Short lane\n") end
+			elseif core.NumberElements(tLongLane) < 1 then
+				tLaneToFill = tLongLane
+				if bDebugEchos then print(" in the Long lane\n") end
 			else
 				BotEcho('Unable to find a lane to fill with a solo :/')
 			end
-			
+
 			if tLaneToFill then
 				local unitBestSolo = self.FindBestLaneSolo(tBotsLeft)
 				if unitBestSolo ~= nil then
@@ -1165,16 +1145,16 @@ function object:BuildLanes()
 				end
 			end
 		end
-		
+
 		nEmptyLanes = core.NumberTablesEmpty(tTopLane, tMiddleLane, tBottomLane)
 		nBotsLeft = core.NumberElements(tBotsLeft)
 	end
-	
+
 	if bDebugEchos then
 		Echo('  Built Lanes:')
 		self:PrintLanes(tTopLane, tMiddleLane, tBottomLane)	
 	end
-	
+
 	self.tTopLane = tTopLane
 	self.tMiddleLane = tMiddleLane
 	self.tBottomLane = tBottomLane
