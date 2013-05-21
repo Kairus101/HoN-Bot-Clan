@@ -90,7 +90,6 @@ function runelib.GetNearestRune(pos, certain)
 	return nearestRune
 end
 
-
 function runelib.pickRune(botBrain, rune)
 	if rune == nil or rune.location == nil or rune.picked then
 		return false
@@ -98,7 +97,6 @@ function runelib.pickRune(botBrain, rune)
 	if not HoN.CanSeePosition(rune.location) or rune.unit == nil then
 		return behaviorLib.MoveExecute(botBrain, rune.location)
 	else
-		BotEcho("pick rune")
 		return core.OrderTouch(botBrain, core.unitSelf, rune.unit)
 	end
 end

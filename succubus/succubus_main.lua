@@ -294,7 +294,6 @@ function behaviorLib.newUseHealthRegenUtility(botBrain)
 	if core.itemBottle and core.itemBottle:CanActivate() and bottle.getCharges() ~= 0 and core.NumberElements(eventsLib.incomingProjectiles["all"]) == 0 then
 		bottleUtil = core.ATanFn(missingHP, Vector3.Create(135, 25), Vector3.Create(0,0), 100)
 		bottleUtil = bottleUtil + (core.Clamp(unitSelf:GetMaxMana() - unitSelf:GetMana(), 0, 140) - 70) * 0.2
-		BotEcho(bottleUtil)
 	end
 
 	--Bottle
@@ -386,9 +385,16 @@ function behaviorLib.PickRuneUtility(botBrain)
 	return 0
 end
 
---press R to kill
 function behaviorLib.PickRuneExecute(botBrain)
-	--todo sleep
+	if core.NumberElements(core.localUnits["EnemyHeroes"]) > 0 then
+		local mesmeRange = skills.mesme:GetRange()
+		local mypos = core.unitSelf:GetPosition()
+		for _,hero in pairs(core.localUnits["EnemyHeroes"]) do
+			if Vector3.Distance2DSq(mypos, hero:GetPosition()) <= mesmeRange * mesmeRange then
+				return core.OrderAbilityEntity(botBrain, skills.mesme, hero)
+			end
+		end
+	end
 	return runelib.pickRune(botBrain, behaviorLib.runeToPick)
 end
 
