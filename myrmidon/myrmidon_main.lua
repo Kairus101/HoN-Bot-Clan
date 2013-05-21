@@ -846,7 +846,7 @@ function GetCreepAttackTargetOverride(botBrain, unitEnemyCreep, unitAllyCreep) -
 			--[Difficulty: Easy] Don't deny
 			if core.nDifficulty == core.nEASY_DIFFICULTY then
 				bActuallyDeny = false
-			end         
+			end
 			
 			-- [Tutorial] Hellbourne *will* deny creeps after shit gets real
 			if core.bIsTutorial and core.bTutorialBehaviorReset == true and core.myTeam == HoN.GetHellbourneTeam() then
@@ -870,7 +870,7 @@ function AttackCreepsExecuteOverride(botBrain)
 	local unitSelf = core.unitSelf
 	local unitCreepTarget = core.unitCreepTarget
 
-	if (unitSelf:GetAttackType() ~= "melee") and unitCreepTarget and core.CanSeeUnit(botBrain, unitCreepTarget) then      
+	if (unitSelf:GetAttackType() ~= "melee") and unitCreepTarget and core.CanSeeUnit(botBrain, unitCreepTarget) then
 		--Get info about the target we are about to attack
 		local vecSelfPos = unitSelf:GetPosition()
 		local vecTargetPos = unitCreepTarget:GetPosition()
