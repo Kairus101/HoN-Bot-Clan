@@ -34,6 +34,7 @@ runfile "bots/eventsLib.lua"
 runfile "bots/metadata.lua"
 runfile "bots/behaviorLib.lua"
 runfile "bots/bottle.lua"
+runfile "bots/rune.lua"
 
 local core, eventsLib, behaviorLib, metadata, skills = object.core, object.eventsLib, object.behaviorLib, object.metadata, object.skills
 
@@ -44,6 +45,9 @@ local ceil, floor, pi, tan, atan, atan2, abs, cos, sin, acos, max, random
 
 local BotEcho, VerboseLog, BotLog = core.BotEcho, core.VerboseLog, core.BotLog
 local Clamp = core.Clamp
+
+local bottle = object.bottle
+local runelib = object.runelib
 
 
 BotEcho(object:GetName()..' loading succubus_main...')
@@ -287,8 +291,10 @@ function behaviorLib.newUseHealthRegenUtility(botBrain)
 	end
 
 	local bottleUtil = 0
-	if core.itemBottle and core.itemBottle:CanActivate() and core.NumberElements(eventsLib.incomingProjectiles["all"]) == 0 then
+	if core.itemBottle and core.itemBottle:CanActivate() and bottle.getCharges() ~= 0 and core.NumberElements(eventsLib.incomingProjectiles["all"]) == 0 then
 		bottleUtil = core.ATanFn(missingHP, Vector3.Create(135, 25), Vector3.Create(0,0), 100)
+		bottleUtil = bottleUtil + (core.Clamp(unitSelf:GetMaxMana() - unitSelf:GetMana(), 0, 140) - 70) * 0.2
+		BotEcho(bottleUtil)
 	end
 
 	--Bottle
@@ -355,7 +361,7 @@ end
 
 function behaviorLib.bottleHeal(botBrain)
 	if core.itemBottle and core.itemBottle:CanActivate() then
-		object.bottle.drink(botBrain)
+		bottle.drink(botBrain)
 	end
 	return false
 end
@@ -366,3 +372,28 @@ end
 
 behaviorLib.oldUseHealthRegenExecute = behaviorLib.UseHealthRegenBehavior["Execute"]
 behaviorLib.UseHealthRegenBehavior["Execute"] = behaviorLib.newUseHealthRegenExecute
+
+
+behaviorLib.runeToPick = nil
+function behaviorLib.PickRuneUtility(botBrain)
+	if bottle.getCharges() == 0 then
+		local rune = runelib.GetNearestRune()
+		if rune then
+			behaviorLib.runeToPick = rune
+			return 30
+		end
+	end
+	return 0
+end
+
+--press R to kill
+function behaviorLib.PickRuneExecute(botBrain)
+	--todo sleep
+	return runelib.pickRune(botBrain, behaviorLib.runeToPick)
+end
+
+behaviorLib.PickRuneBehavior = {}
+behaviorLib.PickRuneBehavior["Utility"] = behaviorLib.PickRuneUtility
+behaviorLib.PickRuneBehavior["Execute"] = behaviorLib.PickRuneExecute
+behaviorLib.PickRuneBehavior["Name"] = "Pick Rune"
+tinsert(behaviorLib.tBehaviors, behaviorLib.PickRuneBehavior)
