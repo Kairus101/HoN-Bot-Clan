@@ -992,19 +992,56 @@ Rough psuedo code ideas for calculating initial lane assignment:
 4) Assign lane support/carry as appropriate with secondary goal of splitting range/melee 
 5) Echo back to bots their lane assignments (purely to give bots a chance to select an item build appropriate for their lane)
 
+
+The following set of checks should distribute the lanes properly:
+
+	Find and assign best mid
+	if Jungler then
+		check SoloShort vs SoloLong
+		if SoloLong is better then
+			assign SoloLong to long lane
+			assign Jungler to short lane
+			asssign remaining to short Lane
+		else
+			assign SoloShort to short lane
+			assign Jungler to short lane
+			assign remaining to long lane
+		end
+	else
+		if trilane then
+			check SoloShort vs SoloLng
+			if SoloLong is better then
+				assign SoloLong to long lane
+				asssign remaining to short Lane
+			elseif SoloShort is better then
+				assign SoloShort to short lane
+				assign remaining to long lane
+			end
+		else
+			make 2 pairs of units
+			assign each pair to a lane	
+		end
+	end
+	
+note that I'm ignoring Human players for right now.
+	--DarkFire
 --]]
 
 object.nLaneProximityThreshold = 0.60 --how close you need to be (percentage-wise) to be "in" a lane
 
-object.lanePreference = {
+object.laneBuild = {}
+
+object.laneBuild.preference = {
 	Mid = 0,
 	Top = 0,
 	Bottom = 0,
 	Jungle = 0,
 }
 
-object.lanePartnerPreference = { -- I don't like this variable name but i couldn't think of anything better
+object.laneBuild.role = {
 	Support = 0,
+	Carry = 0,
+	Ganker = 0,
 	SoloLong = 0,
 	SoloShort = 0,
 	TriLane = 0,
