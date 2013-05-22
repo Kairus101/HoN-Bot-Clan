@@ -372,6 +372,26 @@ end
 behaviorLib.oldUseHealthRegenExecute = behaviorLib.UseHealthRegenBehavior["Execute"]
 behaviorLib.UseHealthRegenBehavior["Execute"] = behaviorLib.newUseHealthRegenExecute
 
+--------------
+--   Mana   --
+--------------
+
+function behaviorLib.ManaUtility(botBrain)
+	if core.itemBottle and core.itemBottle:CanActivate() and bottle.getCharges() ~= 0 and core.NumberElements(eventsLib.incomingProjectiles["all"]) == 0 then
+		local unitSelf = core.unitSelf
+		local missingMana = unitSelf:GetMaxMana() - unitSelf:GetMana()
+		return core.ATanFn(missingMana, Vector3.Create(70, 22), Vector3.Create(0,0), 100)
+	end
+	return 0
+end
+
+
+behaviorLib.ManaBehavior = {}
+behaviorLib.ManaBehavior["Utility"] = behaviorLib.ManaUtility
+behaviorLib.ManaBehavior["Execute"] = behaviorLib.bottleHeal
+behaviorLib.ManaBehavior["Name"] = "Mana"
+tinsert(behaviorLib.tBehaviors, behaviorLib.ManaBehavior)
+
 
 behaviorLib.runeToPick = nil
 function behaviorLib.PickRuneUtility(botBrain)
