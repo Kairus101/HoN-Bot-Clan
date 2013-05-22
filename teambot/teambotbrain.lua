@@ -1045,7 +1045,7 @@ Method 2 'sudo' code:
 	
 	--run the recurrsive function.
 	sumPreferencances(tPossibleLanes,1, 0)
-
+	--tCombinations now holds the best combinations for the heroes.
 	
 	function table.copy(t)
 	  local t2 = {}
