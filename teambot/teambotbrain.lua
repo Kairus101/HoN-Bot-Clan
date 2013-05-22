@@ -986,14 +986,22 @@ Plague: 	{ Jungle = 0, Mid = 2, ShortSolo = 4, LongSolo = 5, ShortSupport = 3, L
 
 Rough psuedo code ideas for calculating initial lane assignment:
 
+Method 1 (drafting algorhythm):
 1) Scan team and import tables of bot preferences.  (If no table exists for a bot, fill it with default values).
 2) Scan bot preferences for valid jungler (Jungle > 2?) AND solo (ShortSolo > 3 OR LongSolo > 3?) and assign these lanes as appropriate
 3) Assign bot with highest mid preference to mid.  Range breaks ties?
 4) Assign lane support/carry as appropriate with secondary goal of splitting range/melee 
 5) Echo back to bots their lane assignments (purely to give bots a chance to select an item build appropriate for their lane)
 
+Method 2 (bot preference based):
+1) Scan team and import tables of bot preferences.  (If no table exists for a bot, fill it with default values).
+2) Scan all possible combinations of lanes and find the highest sum of the preferences. On easy mode, these values should randomely get
+	numbers added/subttracted to them, for odd laning combinations.
+3) Decide tie-breakers via: 2-1-1 w/jungle then 2-1-2, then splitting ranged, then longest range mid, then random between remaining combos.
+4) Echo back to bots their lane assignments (purely to give bots a chance to select an item build appropriate for their lane)
 
-The following set of checks should distribute the lanes properly:
+Method 1 sudo code:
+	--The following set of checks should distribute the lanes properly:
 
 	Find and assign best mid
 	if Jungler then
@@ -1023,8 +1031,57 @@ The following set of checks should distribute the lanes properly:
 		end
 	end
 	
-note that I'm ignoring Human players for right now.
+	--note that I'm ignoring Human players for right now.
 	--DarkFire
+	
+Method 2 sudo code:
+	--                  0, 1,2,3,4,5
+	tValueMultipliers={-3,-1,1,2,3,5} --this is to make sure that a terrible lane for a bot won't be forced onto it unless absolutely necessary.
+
+	--Loop through every combanation and add the sums 
+	function table.copy(t)
+	  local t2 = {}
+	  for k,v in pairs(t) do
+		t2[k] = v
+	  end
+	  return t2
+	end
+
+	local nHighestCombo=0
+	local tCombinations={}
+	local neededCount=5 --amount of bots
+	local tPossibleLanes={"Jungle", "Mid", "ShortSolo", "LongSolo", "ShortSupport", "LongSupport", "ShortCarry", "LongCarry"}
+	sumPreferencances(tPossibleLanes,1, 0)
+	
+	function sumPreferencances(tPossibleLanes, index, sum, tCurrentLanes){ --recurrsive function.
+		local norigSum=sum
+		for (i=1,tPossibleLanes) do --iterate lanes for current bot
+			--             /   multiplier  /  look into bots table  /  get bot     /get lane
+			sum=norigSum+ tValueMultipliers[ TABLE_BOTS_PREFERENCES[ tPossibleLanes[i] ] ]
+			if (index>=neededCount) then --last unit, no need to search deeper.
+			
+				if (sum>nHighestCombo) then --We have a new highest combo!
+					nHighestCombo=sum
+					tCombinations={}
+					tinsert(tCombinations,tCurrentLanes)
+				elseif (sum==nHighestCombo) then --We have another combo just as good!
+					tinsert(tCombinations,tCurrentLanes)
+				end
+			else -- there are still more bots to go through!
+				local tNewCurrentLanes=table.copy(tCurrentLanes)
+				tinsert(tNewCurrentLanes,i)
+				local tNewPossibleLanes=table.copy(tPossibleLanes)
+				tremove(tNewPossibleLanes,i)
+				sumPreferencances(tNewPossibleLanes, index+1, sum, tNewCurrentLanes) --run function again for next bot.
+			end
+		end
+	end
+
+	--note that I'm ignoring Human players for right now.
+	--Kairus
+
+
+
 --]]
 
 object.nLaneProximityThreshold = 0.60 --how close you need to be (percentage-wise) to be "in" a lane
