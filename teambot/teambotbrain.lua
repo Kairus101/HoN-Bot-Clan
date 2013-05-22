@@ -1056,7 +1056,7 @@ Method 2 'sudo' code:
 	end
 	
 	--Loop through every combination and add the sums 
-	function sumPreferencances(tPossibleLanes, index, sum, tCurrentLanes){ --recurrsive function.
+	function sumPreferences(tPossibleLanes, index, sum, tCurrentLanes){ --recurrsive function.
 		local norigSum=sum
 		for (i=1,tPossibleLanes) do --iterate lanes for current bot
 			--             /   multiplier  /  look into bots table  /  get bot     /get lane
@@ -1076,7 +1076,7 @@ Method 2 'sudo' code:
 					tinsert(tNewCurrentLanes,i)
 					local tNewPossibleLanes=table.copy(tPossibleLanes)
 					tremove(tNewPossibleLanes,i)
-					sumPreferencances(tNewPossibleLanes, index+1, sum, tNewCurrentLanes) --run function again for next bot.
+					sumPreferences(tNewPossibleLanes, index+1, sum, tNewCurrentLanes) --run function again for next bot.
 				end
 			end
 		end
