@@ -994,21 +994,26 @@ Method 2 (bot preference based):
 4) Echo back to bots their lane assignments (purely to give bots a chance to select an item build appropriate for their lane)
 
 --]]
-	
---Method 2 working code:
 
 object.nLaneProximityThreshold = 0.60 --how close you need to be (percentage-wise) to be "in" a lane
 
 object.teamBotBrain = object.teamBotBrain or {}
 
 teamBotBrain.lanePreferences = {
-	{ Jungle = 0, Mid = 1, ShortSolo = 1, LongSolo = 1, ShortSupport = 5, LongSupport = 5, ShortCarry = 1, LongCarry = 1 , name="empath" },--empath
-	{ Jungle = 0, Mid = 5, ShortSolo = 2, LongSolo = 1, ShortSupport = 1, LongSupport = 1, ShortCarry = 3, LongCarry = 3 , name="pebbs" },--pebbs
-	{ Jungle = 5, Mid = 2, ShortSolo = 2, LongSolo = 1, ShortSupport = 1, LongSupport = 1, ShortCarry = 2, LongCarry = 2 , name="lego" },--lego
-	{ Jungle = 0, Mid = 2, ShortSolo = 4, LongSolo = 5, ShortSupport = 3, LongSupport = 4, ShortCarry = 2, LongCarry = 2 , name="plague" },--plague
-	{ Jungle = 0, Mid = 5, ShortSolo = 4, LongSolo = 1, ShortSupport = 1, LongSupport = 1, ShortCarry = 4, LongCarry = 3 , name="soulStealer" }--soulStealer
+	{ Jungle = 0, Mid = 1, ShortSolo = 1, LongSolo = 1, ShortSupport = 5, LongSupport = 5, ShortCarry = 1, LongCarry = 1 , name = "empath" },
+	{ Jungle = 0, Mid = 5, ShortSolo = 2, LongSolo = 1, ShortSupport = 1, LongSupport = 1, ShortCarry = 3, LongCarry = 3 , name = "pebbs" },
+	{ Jungle = 5, Mid = 2, ShortSolo = 2, LongSolo = 1, ShortSupport = 1, LongSupport = 1, ShortCarry = 2, LongCarry = 2 , name = "lego" },
+	{ Jungle = 0, Mid = 2, ShortSolo = 4, LongSolo = 5, ShortSupport = 3, LongSupport = 4, ShortCarry = 2, LongCarry = 2 , name = "plague" },
+	{ Jungle = 0, Mid = 5, ShortSolo = 4, LongSolo = 1, ShortSupport = 1, LongSupport = 1, ShortCarry = 4, LongCarry = 3 , name = "soulStealer" }
 }
 
+local nHighestCombo = 0
+local tCombinations = {}
+local nNumBots = core.NumberElements(self.tAllyBotHeroes)
+
+-- This is to make sure that a terrible lane for a bot won't be forced onto it unless absolutely necessary.
+local tValueMultipliers = {-3, -1, 1, 2, 3, 5} 
+	
 -- Recurrsive function to Loop through every possible bot combination and add the sums
 local function sumPreferences(tPossibleLanes, nIndex, nSum, tCurrentLanes)
 	local nOrigSum = nSum
@@ -1063,12 +1068,12 @@ function object:BuildLanes()
 	local tMiddleLane = {}
 	local tBottomLane = {}
 	local tJungle = {}
-
+	
+	local tPossibleLanes = {"Jungle", "Mid", "ShortSolo", "LongSolo", "ShortSupport", "LongSupport", "ShortCarry", "LongCarry"}
+	-- Need to remove values from tPossibleLanes to account for Human players in the loop below
+	
+	
 	-- Check for players already in lane
-	local nHumansInTop = 0
-	local nHumansInMid = 0
-	local nHumansInBottom = 0
-	local nHumansInJungle = 0
 	local nDistToWellSq = Vector3.Distance2DSq(vecPosition, core.allyWell:GetPosition())
 	for nID, unitHero in pairs(self.tAllyHumanHeroes) do
 		local vecPosition = unitHero:GetPosition()
@@ -1076,10 +1081,8 @@ function object:BuildLanes()
 			local tLaneBreakdown = core.GetLaneBreakdown(unitHero)
 			if tLaneBreakdown["mid"] >= self.nLaneProximityThreshold then
 				tMiddleLane[nID] = unitHero
-				nHumansInLane = nHumansInMid + 1
 			elseif tLaneBreakdown["top"] >= self.nLaneProximityThreshold  then
 				tTopLane[nID] = unitHero
-				nHumansInLane = nHumansInTop + 1
 				if false and core.myTeam == HoN.GetHellbourneTeam() then
 				
 				
@@ -1092,23 +1095,21 @@ function object:BuildLanes()
 					
 					
 					tJungle[nID] = unitHero
-					nHumansInJungle = nHumansInJungle + 1
 				end
 			elseif tLaneBreakdown["bot"] >= self.nLaneProximityThreshold then
 				tBottomLane[nID] = unitHero
-				nHumansInLane = nHumansInBottom + 1
 				if false and core.myTeam == HoN.GetLegionTeam() then
 				
 				
-				
+			
 				
 					-- LEGION JUNGLE CHECK IS HERE
 					-- The false in the if statement should be a check for if the player is in the jungle
 					
 					
 					
+					
 					tJungle[nID] = unitHero
-					nHumansInJungle = nHumansInJungle + 1
 				end
 			end			
 		end
@@ -1149,26 +1150,12 @@ function object:BuildLanes()
 		end
 	end	
 	-- /Tutorial
+	
 
-	local nHighestCombo = 0
-	local tCombinations = {}
-	local nNumBots = core.NumberElements(self.tAllyBotHeroes)
-	local tPossibleLanes = {"Jungle", "Mid", "ShortSolo", "LongSolo", "ShortSupport", "LongSupport", "ShortCarry", "LongCarry"}
-
-	-- This is to make sure that a terrible lane for a bot won't be forced onto it unless absolutely necessary.
-	tValueMultipliers = {-3, -1, 1, 2, 3, 5} 
-	
-	
-	
-	
 	
 	-- ASSIGN teamBotBrain.lanePreferences TO HUMAN PLAYERS
 	-- Guess each human players preferences based on their location, range, primary attribute
-	
-	
-	
-	-- REMOVE VALUES FROM tPossibleLanes BASED ON PLAYERS LOCATIONS
-	-- This can be done in the loop above
+
 	
 	
 	
