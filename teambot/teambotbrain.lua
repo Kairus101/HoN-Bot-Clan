@@ -1035,10 +1035,18 @@ Method 1 sudo code:
 	--DarkFire
 	
 Method 2 sudo code:
+
+	local nHighestCombo=0
+	local tCombinations={}
+	local neededCount=5 --amount of bots
+	local tPossibleLanes={"Jungle", "Mid", "ShortSolo", "LongSolo", "ShortSupport", "LongSupport", "ShortCarry", "LongCarry"}
 	--                  0, 1,2,3,4,5
 	tValueMultipliers={-3,-1,1,2,3,5} --this is to make sure that a terrible lane for a bot won't be forced onto it unless absolutely necessary.
+	
+	--run the recurrsive function.
+	sumPreferencances(tPossibleLanes,1, 0)
 
-	--Loop through every combanation and add the sums 
+	
 	function table.copy(t)
 	  local t2 = {}
 	  for k,v in pairs(t) do
@@ -1046,13 +1054,8 @@ Method 2 sudo code:
 	  end
 	  return t2
 	end
-
-	local nHighestCombo=0
-	local tCombinations={}
-	local neededCount=5 --amount of bots
-	local tPossibleLanes={"Jungle", "Mid", "ShortSolo", "LongSolo", "ShortSupport", "LongSupport", "ShortCarry", "LongCarry"}
-	sumPreferencances(tPossibleLanes,1, 0)
 	
+	--Loop through every combination and add the sums 
 	function sumPreferencances(tPossibleLanes, index, sum, tCurrentLanes){ --recurrsive function.
 		local norigSum=sum
 		for (i=1,tPossibleLanes) do --iterate lanes for current bot
