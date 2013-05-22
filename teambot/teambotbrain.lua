@@ -1034,7 +1034,7 @@ Method 1 sudo code:
 	--note that I'm ignoring Human players for right now.
 	--DarkFire
 	
-Method 2 sudo code:
+Method 2 'sudo' code:
 
 	local nHighestCombo=0
 	local tCombinations={}
@@ -1070,12 +1070,14 @@ Method 2 sudo code:
 				elseif (sum==nHighestCombo) then --We have another combo just as good!
 					tinsert(tCombinations,tCurrentLanes)
 				end
-			else -- there are still more bots to go through!
-				local tNewCurrentLanes=table.copy(tCurrentLanes)
-				tinsert(tNewCurrentLanes,i)
-				local tNewPossibleLanes=table.copy(tPossibleLanes)
-				tremove(tNewPossibleLanes,i)
-				sumPreferencances(tNewPossibleLanes, index+1, sum, tNewCurrentLanes) --run function again for next bot.
+				-- the next line will stop looking through this branch if there is no way we could compete with the current highest score, else look.
+			elseif ((neededCount-index)*tValueMultipliers[#tValueMultipliers] >= nHighestCombo) then -- there are still more bots to go through!
+					local tNewCurrentLanes=table.copy(tCurrentLanes)
+					tinsert(tNewCurrentLanes,i)
+					local tNewPossibleLanes=table.copy(tPossibleLanes)
+					tremove(tNewPossibleLanes,i)
+					sumPreferencances(tNewPossibleLanes, index+1, sum, tNewCurrentLanes) --run function again for next bot.
+				end
 			end
 		end
 	end
