@@ -282,9 +282,8 @@ local function HarassHeroExecuteOverride(botBrain)
 
 	--pk suprise
 	if bCanSee and core.itemPortalKey and core.itemPortalKey:CanActivate() and object.pkThreshold < nLastHarassUtility then
-		if Vector3.Distance2DSq(vecMyPosition, vecTargetPosition) > 800 * 800 and (not IsTowerThreateningPosition(vecTargetPosition) or nLastHarassUtility > behaviorLib.diveThreshold) then
-			units = HoN.GetUnitsInRadius(vecTargetPosition, 1000, core.UNIT_MASK_HERO + core.UNIT_MASK_ALIVE)
-			EnemyHeroes = core.SortUnitsAndBuildings(units, {}, false).enemyHeroes
+		if Vector3.Distance2DSq(vecMyPosition, vecTargetPosition) > 800 * 800 and (core.GetTowersThreateningPosition(vecTargetPosition, nMyExtraRange, core.myTeam) or nLastHarassUtility > behaviorLib.diveThreshold) then
+			EnemyHeroes = HoN.GetUnitsInRadius(vecTargetPosition, 1000, core.UNIT_MASK_HERO + core.UNIT_MASK_ALIVE, true)[2].EnemyHeroes
 			if core.NumberElements(EnemyHeroes) == 1 then
 				core.OrderItemPosition(botBrain, unitSelf, core.itemPortalKey, vecTargetPosition)
 			end
@@ -490,21 +489,3 @@ behaviorLib.PickRuneBehavior["Utility"] = behaviorLib.PickRuneUtility
 behaviorLib.PickRuneBehavior["Execute"] = behaviorLib.PickRuneExecute
 behaviorLib.PickRuneBehavior["Name"] = "Pick Rune"
 tinsert(behaviorLib.tBehaviors, behaviorLib.PickRuneBehavior)
-
-----------------
---	MISC	--
-----------------
-
-function IsTowerThreateningPosition(position)
-
-	local nTowerRange = 821.6 --700 + (86 * sqrtTwo)
-	local rangeSQ = nTowerRange * nTowerRange
-
-	for _,tower in pairs(core.enemyTowers) do
-		if tower:IsValid() and tower:GetCanAttack() and Vector3.Distance2DSq(position, tower:GetPosition()) <= rangeSQ then
-			return true
-		end
-	end
-
-	return false
-end
