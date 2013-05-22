@@ -1000,7 +1000,7 @@ Method 2 (bot preference based):
 3) Decide tie-breakers via: 2-1-1 w/jungle then 2-1-2, then splitting ranged, then longest range mid, then random between remaining combos.
 4) Echo back to bots their lane assignments (purely to give bots a chance to select an item build appropriate for their lane)
 
-Method 1 sudo code:
+--Method 1 sudo code:
 	--The following set of checks should distribute the lanes properly:
 
 	Find and assign best mid
@@ -1033,19 +1033,23 @@ Method 1 sudo code:
 	
 	--note that I'm ignoring Human players for right now.
 	--DarkFire
+	--]]
 	
-Method 2 'sudo' code:
-
+--Method 2 working code:
+	--Sample values for 'typical' bots:
+	local TABLE_BOTS_PREFERENCES={
+		{ Jungle = 0, Mid = 1, ShortSolo = 1, LongSolo = 1, ShortSupport = 5, LongSupport = 5, ShortCarry = 1, LongCarry = 1 , name="empath" },--empath
+		{ Jungle = 0, Mid = 5, ShortSolo = 2, LongSolo = 1, ShortSupport = 1, LongSupport = 1, ShortCarry = 3, LongCarry = 3 , name="pebbs" },--pebbs
+		{ Jungle = 5, Mid = 2, ShortSolo = 2, LongSolo = 1, ShortSupport = 1, LongSupport = 1, ShortCarry = 2, LongCarry = 2 , name="lego" },--lego
+		{ Jungle = 0, Mid = 2, ShortSolo = 4, LongSolo = 5, ShortSupport = 3, LongSupport = 4, ShortCarry = 2, LongCarry = 2 , name="plague" },--plague
+		{ Jungle = 0, Mid = 5, ShortSolo = 4, LongSolo = 1, ShortSupport = 1, LongSupport = 1, ShortCarry = 4, LongCarry = 3 , name="soulStealer" }--soulStealer
+	}
 	local nHighestCombo=0
 	local tCombinations={}
 	local neededCount=5 --amount of bots
 	local tPossibleLanes={"Jungle", "Mid", "ShortSolo", "LongSolo", "ShortSupport", "LongSupport", "ShortCarry", "LongCarry"}
 	--                  0, 1,2,3,4,5
 	tValueMultipliers={-3,-1,1,2,3,5} --this is to make sure that a terrible lane for a bot won't be forced onto it unless absolutely necessary.
-	
-	--run the recurrsive function.
-	sumPreferencances(tPossibleLanes,1, 0)
-	--tCombinations now holds the best combinations for the heroes.
 	
 	function table.copy(t)
 	  local t2 = {}
@@ -1054,40 +1058,70 @@ Method 2 'sudo' code:
 	  end
 	  return t2
 	end
+	function removeFromTable(t,s)
+		for k,v in pairs(t) do
+			if v==s then
+				table.remove(t,k)
+				return
+			end
+		end
+	end
 	
 	--Loop through every combination and add the sums 
-	function sumPreferences(tPossibleLanes, index, sum, tCurrentLanes){ --recurrsive function.
+	function sumPreferences(tPossibleLanes, index, sum, tCurrentLanes) --recurrsive function.
 		local norigSum=sum
-		for (i=1,tPossibleLanes) do --iterate lanes for current bot
+		for i=1,#tPossibleLanes do --iterate lanes for current bot
 			--             /   multiplier  /  look into bots table  /  get bot     /get lane
-			sum=norigSum+ tValueMultipliers[ TABLE_BOTS_PREFERENCES[ tPossibleLanes[i] ] ]
-			if (index>=neededCount) then --last unit, no need to search deeper.
-			
+			sum=norigSum+ tValueMultipliers[ TABLE_BOTS_PREFERENCES[index][ tPossibleLanes[i] ] +1 ]
+			--BotEcho("Looking at bot "..index.." lane "..i)
+			if (index==neededCount) then --last unit, no need to search deeper.
+				local tNewCurrentLanes=table.copy(tCurrentLanes)
+				tinsert(tNewCurrentLanes,tPossibleLanes[i])
 				if (sum>nHighestCombo) then --We have a new highest combo!
 					nHighestCombo=sum
 					tCombinations={}
-					tinsert(tCombinations,tCurrentLanes)
+					--BotEcho(TABLE_BOTS_PREFERENCES[index].name .. " to "..tPossibleLanes[i].." inserting element:"..#tCurrentLanes+1)
+					tinsert(tCombinations,tNewCurrentLanes)
 				elseif (sum==nHighestCombo) then --We have another combo just as good!
-					tinsert(tCombinations,tCurrentLanes)
+					tinsert(tCombinations,tNewCurrentLanes)
 				end
 				-- the next line will stop looking through this branch if there is no way we could compete with the current highest score, else look.
-			elseif ((neededCount-index)*tValueMultipliers[#tValueMultipliers] >= nHighestCombo) then -- there are still more bots to go through!
-					local tNewCurrentLanes=table.copy(tCurrentLanes)
-					tinsert(tNewCurrentLanes,i)
-					local tNewPossibleLanes=table.copy(tPossibleLanes)
-					tremove(tNewPossibleLanes,i)
-					sumPreferences(tNewPossibleLanes, index+1, sum, tNewCurrentLanes) --run function again for next bot.
-				end
+			elseif ( sum+(neededCount-index)*tValueMultipliers[#tValueMultipliers] >= nHighestCombo) then -- there are still more bots to go through!
+				local tNewCurrentLanes=table.copy(tCurrentLanes)
+				tinsert(tNewCurrentLanes,tPossibleLanes[i])
+				local tNewPossibleLanes=table.copy(tPossibleLanes)
+				tremove(tNewPossibleLanes,i)
+				--The following are clashes between laneing types.
+				if tPossibleLanes[i]=="ShortSolo" then removeFromTable(tNewPossibleLanes,"ShortSupport") removeFromTable(tNewPossibleLanes,"ShortCarry") end
+				if tPossibleLanes[i]=="ShortSupport" then removeFromTable(tNewPossibleLanes,"ShortSolo") end
+				if tPossibleLanes[i]=="ShortCarry" then removeFromTable(tNewPossibleLanes,"ShortSolo") end
+				if tPossibleLanes[i]=="LongSolo" then removeFromTable(tNewPossibleLanes,"LongSupport") removeFromTable(tNewPossibleLanes,"LongCarry") end
+				if tPossibleLanes[i]=="LongSupport" then removeFromTable(tNewPossibleLanes,"LongSolo") end
+				if tPossibleLanes[i]=="LongCarry" then removeFromTable(tNewPossibleLanes,"LongSolo") end
+				sumPreferences(tNewPossibleLanes, index+1, sum, tNewCurrentLanes) --run function again for next bot.
 			end
 		end
 	end
 
+	function buildTestLane()
+		--run the recurrsive function.
+		sumPreferences(tPossibleLanes,1, 0, {})
+		--tCombinations now holds the best combinations for the heroes.
+		BotEcho("highest combination was with "..nHighestCombo.." and there was "..#tCombinations)
+		for k,v in pairs(tCombinations) do
+			BotEcho("--------------- idea "..k.." -------------------------")
+			for k,v in pairs(v) do
+				BotEcho(TABLE_BOTS_PREFERENCES[k].name..":".. v)
+			end
+		end
+	end
+	
 	--note that I'm ignoring Human players for right now.
 	--Kairus
 
 
 
---]]
+
 
 object.nLaneProximityThreshold = 0.60 --how close you need to be (percentage-wise) to be "in" a lane
 
@@ -1112,6 +1146,8 @@ object.laneBuild.role = {
 function object:BuildLanes()
 	local bDebugEchos = false
 
+	buildTestLane()
+	
 	local tTopLane = {}
 	local tMiddleLane = {}
 	local tBottomLane = {}
