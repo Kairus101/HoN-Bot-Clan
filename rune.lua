@@ -14,44 +14,52 @@ local Clamp = core.Clamp
 object.runelib = {}
 local runelib = object.runelib
 
-local nextSpawnCheck = 120000 --2min mark
-local nextCheck = 120000
-
 local RUNE_UNIT_MASK = core.UNIT_MASK_POWERUP + core.UNIT_MASK_ALIVE
 
-
---todo add types expect "gereatter" and "lesser" rune so bot can go for better rune if it have vision
-local runes = {
-	{location = Vector3.Create(5824, 9728), unit=nil, picked = true},
-	{location = Vector3.Create(11136, 5376), unit=nil, picked = true}
-}
+local teambot = HoN.GetTeamBotBrain()
 
 local runeNames = {"Powerup_Damage", "Powerup_Illusion", "Powerup_Stealth", "Powerup_Refresh", "Powerup_Regen", "Powerup_MoveSpeed", "Powerup_Super"}
 
-function object:runeLibOnthinkOverride(tGameVariables)
-	self:runeLibOnthinkOld(tGameVariables)-- old think
+if teambot.runes == nil then
 
-	time = HoN.GetMatchTime()
-	if time and time > nextSpawnCheck then
-		nextSpawnCheck = nextSpawnCheck + 120000
-		for _,rune in pairs(runes) do
-			--something spawned
-			rune.picked = false
-			rune.unit = nil
+	teambot.nextSpawnCheck = 120000 --2min mark
+	teambot.nextCheck = 120000
+	teambot.checkInterval = 1000
+
+	--todo add types expect "gereatter" and "lesser" rune so bot can go for better rune if it have vision
+	teambot.runes = {
+		{location = Vector3.Create(5824, 9728), unit=nil, picked = true},
+		{location = Vector3.Create(11136, 5376), unit=nil, picked = true}
+	}
+
+
+
+	function teambot:runeLibOnthinkOverride(tGameVariables)
+		self:runeLibOnthinkOld(tGameVariables)-- old think
+
+		time = HoN.GetMatchTime()
+		if time and time > teambot.nextSpawnCheck then
+			teambot.nextSpawnCheck = teambot.nextSpawnCheck + 120000
+			for _,rune in pairs(teambot.runes) do
+				--something spawned
+				rune.picked = false
+				rune.unit = nil
+			end
+			runelib.checkRunes()
 		end
-		runelib.checkRunes()
-	end
-	if time and time > nextCheck then
-		nextCheck = nextCheck + 1000
-		runelib.checkRunes()
-	end
+		if time and time > teambot.nextCheck then
+			teambot.nextCheck = teambot.nextCheck + teambot.checkInterval
+			runelib.checkRunes()
+		end
 
-end
-object.runeLibOnthinkOld = object.onthink
-object.onthink 	= object.runeLibOnthinkOverride
+	end
+	teambot.runeLibOnthinkOld = teambot.onthink
+	teambot.onthink 	= teambot.runeLibOnthinkOverride
+
+end --of editting teambot
 
 function runelib.checkRunes()
-	for _,rune in pairs(runes) do
+	for _,rune in pairs(teambot.runes) do
 		if HoN.CanSeePosition(rune.location) then
 			units = HoN.GetUnitsInRadius(rune.location, 50, RUNE_UNIT_MASK)
 			local runeFound = false
@@ -78,7 +86,7 @@ function runelib.GetNearestRune(pos, certain)
 
 	local nearestRune = nil
 	local shortestDistanceSQ = 99999999
-	for _,rune in pairs(runes) do
+	for _,rune in pairs(teambot.runes) do
 		if not certain or rune.unit ~= nil then
 			local distance = Vector3.Distance2DSq(rune.location, mypos)
 			if not rune.picked and distance < shortestDistanceSQ then
