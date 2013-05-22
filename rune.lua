@@ -32,8 +32,6 @@ if teambot.runes == nil then
 		{location = Vector3.Create(11136, 5376), unit=nil, picked = true}
 	}
 
-
-
 	function teambot:runeLibOnthinkOverride(tGameVariables)
 		self:runeLibOnthinkOld(tGameVariables)-- old think
 

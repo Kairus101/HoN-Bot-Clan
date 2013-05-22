@@ -282,10 +282,13 @@ local function HarassHeroExecuteOverride(botBrain)
 
 	--pk suprise
 	if bCanSee and core.itemPortalKey and core.itemPortalKey:CanActivate() and object.pkThreshold < nLastHarassUtility then
-		if Vector3.Distance2DSq(vecMyPosition, vecTargetPosition) > 800 * 800 and (core.GetTowersThreateningPosition(vecTargetPosition, nMyExtraRange, core.myTeam) or nLastHarassUtility > behaviorLib.diveThreshold) then
-			EnemyHeroes = HoN.GetUnitsInRadius(vecTargetPosition, 1000, core.UNIT_MASK_HERO + core.UNIT_MASK_ALIVE, true)[2].EnemyHeroes
-			if core.NumberElements(EnemyHeroes) == 1 then
-				core.OrderItemPosition(botBrain, unitSelf, core.itemPortalKey, vecTargetPosition)
+		if Vector3.Distance2DSq(vecMyPosition, vecTargetPosition) > 800 * 800 then
+			if core.NumberElements(core.GetTowersThreateningPosition(vecTargetPosition, nMyExtraRange, core.myTeam)) == 0 or nLastHarassUtility > behaviorLib.diveThreshold then
+				local _,secondtable = HoN.GetUnitsInRadius(vecTargetPosition, 1000, core.UNIT_MASK_HERO + core.UNIT_MASK_ALIVE, true)
+				local EnemyHeroes = secondtable.EnemyHeroes
+				if core.NumberElements(EnemyHeroes) == 1 then
+					core.OrderItemPosition(botBrain, unitSelf, core.itemPortalKey, vecTargetPosition)
+				end
 			end
 		end
 	end
