@@ -67,11 +67,7 @@ behaviorLib.MidItems  = {"Item_PortalKey", "Item_Summon 3", "Item_Intelligence7"
 --behaviorLib.LateItems  = {}
 --item_summon is puzzlebox Item_Intelligence7 is master staff
 
-
-
 object.ultTime = 0
-
-
 
 ------------------------------
 --	 skills			   --
@@ -108,12 +104,39 @@ function object:SkillBuild()
 	end
 end
 
-------------------------------------------------------
---			onthink override					  --
--- Called every bot tick, custom onthink code here  --
-------------------------------------------------------
--- @param: tGameVariables
--- @return: none
+
+----------------------------------
+--  FindItems Override
+----------------------------------
+local function funcFindItemsOverride(botBrain)
+	object.FindItemsOld(botBrain)
+
+	if core.itemPortalKey ~= nil and not core.itemPortalKey:IsValid() then
+		core.itemPortalKey = nil
+	end
+
+	if core.itemPortalKey then
+		return
+	end
+
+	local inventory = core.unitSelf:GetInventory(true)
+	for slot = 1, 6, 1 do
+		local curItem = inventory[slot]
+		if curItem then
+			if core.itemPortalKey == nil and curItem:GetName() == "Item_PortalKey" then
+				core.itemPortalKey = core.WrapInTable(curItem)
+			end
+		end
+	end
+end
+object.FindItemsOld = core.FindItems
+core.FindItems = funcFindItemsOverride
+
+
+--------------------------------
+--		onthink override	  --
+--------------------------------
+
 function object:onthinkOverride(tGameVariables)
 	self:onthinkOld(tGameVariables)
 
@@ -223,9 +246,10 @@ behaviorLib.CustomHarassUtility = CustomHarassUtilityFnOverride
 --					Harass Behavior					   --
 ---------------------------------------------------------
 
-
 object.holdThreshold = 60
 object.heartacheThreshold = 40
+object.mesmeThreshold = 50
+object.pkThreshold = 45
 local function HarassHeroExecuteOverride(botBrain)
 	local unitSelf = core.unitSelf
 
@@ -255,12 +279,46 @@ local function HarassHeroExecuteOverride(botBrain)
 	local nLastHarassUtility = behaviorLib.lastHarassUtil
 	local bCanSee = core.CanSeeUnit(botBrain, unitTarget)	
 	local bActionTaken = false
-	
-	if bCanSee then
-		if nLastHarassUtility > object.heartacheThreshold and skills.hold:CanActivate() then
+
+	--pk suprise
+	if bCanSee and core.itemPortalKey and core.itemPortalKey:CanActivate() and object.pkThreshold < nLastHarassUtility then
+		if Vector3.Distance2DSq(vecMyPosition, vecTargetPosition) > 800 * 800 and (not IsTowerThreateningPosition(vecTargetPosition) or nLastHarassUtility > behaviorLib.diveThreshold) then
+			units = HoN.GetUnitsInRadius(vecTargetPosition, 1000, core.UNIT_MASK_HERO + core.UNIT_MASK_ALIVE)
+			EnemyHeroes = core.SortUnitsAndBuildings(units, {}, false).enemyHeroes
+			if core.NumberElements(EnemyHeroes) == 1 then
+				core.OrderItemPosition(botBrain, unitSelf, core.itemPortalKey, vecTargetPosition)
+			end
+		end
+	end
+
+	local mesmeRange = skills.mesme:GetRange()
+	local smittenRange = skills.smitten:GetRange()
+	local mesmeCanActivate = skills.mesme:CanActivate()
+	local smittenCanActivate = skills.smitten:CanActivate()
+
+	--teamfight
+	if nLastHarassUtility > object.mesmeThreshold then
+		for _,hero in pairs(core.localUnits["EnemyHeroes"]) do
+			if hero ~= unitTarget then
+				if not hero:HasState("State_Succubis_Ability3") and not hero:HasState("State_Succubis_Ability1") then
+					distanceSq = Vector3.Distance2DSq(vecMyPosition, hero:GetPosition())
+					if mesmeCanActivate and distanceSq < mesmeRange*mesmeRange then
+						bActionTaken = core.OrderAbilityEntity(botBrain, skills.mesme, hero)
+						break
+					elseif smittenCanActivate and distanceSq < smittenRange*smittenRange then
+						bActionTaken = core.OrderAbilityEntity(botBrain, skills.smitten, hero)
+						break
+					end
+				end
+			end
+		end
+	end
+
+	if not bActionTaken and bCanSee then
+		if nLastHarassUtility > object.holdThreshold and skills.hold:CanActivate() then
 			bActionTaken = core.OrderAbilityEntity(botBrain, skills.hold, unitTarget)
 		end
-		if not bActionTaken and nLastHarassUtility > object.holdThreshold and skills.heartache:CanActivate() then
+		if not bActionTaken and nLastHarassUtility > object.heartacheThreshold and skills.heartache:CanActivate() then
 			bActionTaken = core.OrderAbilityEntity(botBrain, skills.heartache, unitTarget)
 		end
 	end
@@ -278,6 +336,10 @@ behaviorLib.HarassHeroBehavior["Execute"] = HarassHeroExecuteOverride
 behaviorLib.healFunc = nil
 
 function behaviorLib.newUseHealthRegenUtility(botBrain)
+	if core.unitSelf:HasState("State_PowerupRegen") then
+		return 0
+	end
+
 	oldUtil = behaviorLib.oldUseHealthRegenUtility(botBrain)
 
 	local unitSelf = core.unitSelf
@@ -377,6 +439,10 @@ behaviorLib.UseHealthRegenBehavior["Execute"] = behaviorLib.newUseHealthRegenExe
 --------------
 
 function behaviorLib.ManaUtility(botBrain)
+	if core.unitSelf:HasState("State_PowerupRegen") then
+		return 0
+	end
+
 	if core.itemBottle and core.itemBottle:CanActivate() and bottle.getCharges() ~= 0 and core.NumberElements(eventsLib.incomingProjectiles["all"]) == 0 then
 		local unitSelf = core.unitSelf
 		local missingMana = unitSelf:GetMaxMana() - unitSelf:GetMana()
@@ -384,7 +450,6 @@ function behaviorLib.ManaUtility(botBrain)
 	end
 	return 0
 end
-
 
 behaviorLib.ManaBehavior = {}
 behaviorLib.ManaBehavior["Utility"] = behaviorLib.ManaUtility
@@ -409,9 +474,11 @@ function behaviorLib.PickRuneExecute(botBrain)
 	if core.NumberElements(core.localUnits["EnemyHeroes"]) > 0 then
 		local mesmeRange = skills.mesme:GetRange()
 		local mypos = core.unitSelf:GetPosition()
-		for _,hero in pairs(core.localUnits["EnemyHeroes"]) do
-			if Vector3.Distance2DSq(mypos, hero:GetPosition()) <= mesmeRange * mesmeRange then
-				return core.OrderAbilityEntity(botBrain, skills.mesme, hero)
+		if skills.mesme:CanActivate() then
+			for _,hero in pairs(core.localUnits["EnemyHeroes"]) do
+				if Vector3.Distance2DSq(mypos, hero:GetPosition()) <= mesmeRange * mesmeRange then
+					return core.OrderAbilityEntity(botBrain, skills.mesme, hero)
+				end
 			end
 		end
 	end
@@ -423,3 +490,21 @@ behaviorLib.PickRuneBehavior["Utility"] = behaviorLib.PickRuneUtility
 behaviorLib.PickRuneBehavior["Execute"] = behaviorLib.PickRuneExecute
 behaviorLib.PickRuneBehavior["Name"] = "Pick Rune"
 tinsert(behaviorLib.tBehaviors, behaviorLib.PickRuneBehavior)
+
+----------------
+--	MISC	--
+----------------
+
+function IsTowerThreateningPosition(position)
+
+	local nTowerRange = 821.6 --700 + (86 * sqrtTwo)
+	local rangeSQ = nTowerRange * nTowerRange
+
+	for _,tower in pairs(core.enemyTowers) do
+		if tower:IsValid() and tower:GetCanAttack() and Vector3.Distance2DSq(position, tower:GetPosition()) <= rangeSQ then
+			return true
+		end
+	end
+
+	return false
+end
