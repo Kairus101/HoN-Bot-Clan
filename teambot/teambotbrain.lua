@@ -1000,7 +1000,7 @@ object.nLaneProximityThreshold = 0.60 --how close you need to be (percentage-wis
 
 object.teamBotBrain = object.teamBotBrain or {}
 teamBotBrain=object.teamBotBrain
-teamBotBrain.lanePreferences = {
+object.lanePreferences = {
 --	{ Jungle = 0, Mid = 1, ShortSolo = 1, LongSolo = 1, ShortSupport = 5, LongSupport = 5, ShortCarry = 1, LongCarry = 1 , hero = {} },
 --	{ Jungle = 0, Mid = 5, ShortSolo = 2, LongSolo = 1, ShortSupport = 1, LongSupport = 1, ShortCarry = 3, LongCarry = 3 , hero = {} },
 --	{ Jungle = 5, Mid = 2, ShortSolo = 2, LongSolo = 1, ShortSupport = 1, LongSupport = 1, ShortCarry = 2, LongCarry = 2 , hero = {} },
@@ -1015,8 +1015,6 @@ local tCombinations = {}
 -- This is to make sure that a terrible lane for a bot won't be forced onto it unless absolutely necessary.
 local tValueMultipliers = {-3, -1, 1, 2, 3, 5}
 
---This is filled later.
-local tBotsLeft
 	
 -- Recurrsive function to Loop through every possible bot combination and add the sums
 local function sumPreferences(tPossibleLanes, nIndex, nSum, tCurrentLanes)
@@ -1025,8 +1023,8 @@ local function sumPreferences(tPossibleLanes, nIndex, nSum, tCurrentLanes)
 		--BotEcho("Looking at bot "..nIndex.." lane "..i)
 		-- Iterate over the remaining lanes
 		--             /   multiplier  /  look into bots table  /  get bot     /get lane
-		nSum = nOrigSum + tValueMultipliers[teamBotBrain.lanePreferences[nIndex][tPossibleLanes[i]] + 1]-- +1 as lanePreferences starts at 0
-		if nIndex == core.NumberElements(tBotsLeft) then 
+		nSum = nOrigSum + tValueMultipliers[object.lanePreferences[nIndex][tPossibleLanes[i]] + 1]-- +1 as lanePreferences starts at 0
+		if nIndex == core.NumberElements(object.tBotsLeft) then 
 			-- Last unit, no need to search deeper.
 			local tNewCurrentLanes = core.CopyTable(tCurrentLanes)
 			tinsert(tNewCurrentLanes, tPossibleLanes[i])
@@ -1037,7 +1035,7 @@ local function sumPreferences(tPossibleLanes, nIndex, nSum, tCurrentLanes)
 			elseif nSum == nHighestCombo then
 				tinsert(tCombinations, tNewCurrentLanes)
 			end
-		elseif nSum + ((core.NumberElements(tBotsLeft) - nIndex) * tValueMultipliers[#tValueMultipliers]) >= nHighestCombo then 
+		elseif nSum + ((core.NumberElements(object.tBotsLeft) - nIndex) * tValueMultipliers[#tValueMultipliers]) >= nHighestCombo then 
 			-- Stop looking through this branch if there is no way we could compete with the current highest score
 			local tNewCurrentLanes = core.CopyTable(tCurrentLanes)
 			tinsert(tNewCurrentLanes, tPossibleLanes[i])
@@ -1066,12 +1064,15 @@ local function sumPreferences(tPossibleLanes, nIndex, nSum, tCurrentLanes)
 	end
 end
 
-tAlreadyLoadedPrefs={}
-function SetLanePreferences(tPrefs)
-	BotEcho("^yLOADING PREFERENCES FOR "..tPrefs.hero:GetTypeName())
-	if (not tAlreadyLoadedPrefs[tPrefs.hero:GetUniqueID()]) then
-		tinsert(teamBotBrain.lanePreferences,tprefs)
-		tAlreadyLoadedPrefs[tPrefs.hero:GetUniqueID()]=true
+object.tAlreadyLoadedPrefs={}
+function object:SetLanePreferences(tPrefs)
+	if (tPrefs) then
+		BotEcho("^yLOADING PREFERENCES FOR "..tPrefs.hero:GetTypeName())
+		if (not object.tAlreadyLoadedPrefs[tPrefs.hero:GetUniqueID()]) then
+			object.tAlreadyLoadedPrefs[tPrefs.hero:GetUniqueID()]=tPrefs
+		end
+	else
+		BotEcho("TPREFS IS NIL!")
 	end
 end
 
@@ -1121,7 +1122,7 @@ function object:BuildLanes()
 		end
 	end
 	
-	tBotsLeft = core.CopyTable(self.tAllyBotHeroes)
+	object.tBotsLeft = core.CopyTable(self.tAllyBotHeroes)
 
 	-- Tutorial
 	if core.bIsTutorial and core.myTeam == HoN.GetLegionTeam() then
@@ -1148,9 +1149,9 @@ function object:BuildLanes()
 				end
 			end
 
-			for nUID, unit in pairs(tBotsLeft) do
+			for nUID, unit in pairs(object.tBotsLeft) do
 				if unit == unitSpecialBot then
-					tBotsLeft[nUID] = nil
+					object.tBotsLeft[nUID] = nil
 					break
 				end
 			end	
@@ -1160,7 +1161,7 @@ function object:BuildLanes()
 	
 
 	
-	-- ASSIGN teamBotBrain.lanePreferences TO HUMAN PLAYERS
+	-- ASSIGN object.lanePreferences TO HUMAN PLAYERS
 	-- Guess each human players preferences based on their location, range, primary attribute
 	
 	
@@ -1179,20 +1180,21 @@ function object:BuildLanes()
 	-- BOTS LANE ASSIGNMENT
 	
 	--get preferences from bots.
-	if (#teamBotBrain.lanePreferences < core.NumberElements(tBotsLeft) ) then
-		for _,unitHero in pairs(tBotsLeft) do
-			if (tAlreadyLoadedPrefs[unitHero:GetUniqueID()]) then
+	if (core.NumberElements(object.lanePreferences) < core.NumberElements(object.tBotsLeft) ) then
+		for _,unitHero in pairs(object.tBotsLeft) do
+			if (object.tAlreadyLoadedPrefs[unitHero:GetUniqueID()]) then
 				BotEcho(unitHero:GetTypeName().." had a lane list!")
-				tinsert(teamBotBrain.lanePreferences,unitHero.lanePreferences)
+				tinsert(object.lanePreferences,object.tAlreadyLoadedPrefs[unitHero:GetUniqueID()])
+				
 			else --we need to guess what the bots role is
 				local tGuessedRole={ Jungle = 0, Mid = 1, ShortSolo = 1, LongSolo = 1, ShortSupport = 5, LongSupport = 5, ShortCarry = 1, LongCarry = 1 , hero = unitHero }
 				BotEcho(unitHero:GetTypeName().." didn't have a lane list. Defaulting.")
-				tinsert(teamBotBrain.lanePreferences,tGuessedRole)
+				tinsert(object.lanePreferences,tGuessedRole)
 			end
 		end
 	end
 	
-	BotEcho("There are "..#teamBotBrain.lanePreferences.." prefs, and "..core.NumberElements(tBotsLeft).." bots left")
+	BotEcho("There are "..core.NumberElements(object.lanePreferences).." prefs, and "..core.NumberElements(object.tBotsLeft).." bots left")
 	--Sort our best combinations into tCombinations
 	sumPreferences(tPossibleLanes, 1, 0, {})-- tCombinations now holds the best combinations of heroes
 	
@@ -1202,8 +1204,7 @@ function object:BuildLanes()
 		--BotEcho("--------------- idea "..k.." -------------------------")
 		--for k,v in pairs(v) do
 		--end
-		local hero=teamBotBrain.lanePreferences[k].hero
-		BotEcho(hero:GetTypeName()..":".. v)
+		local hero=object.lanePreferences[k].hero
 		if string.find(v, "Short") then
 			tShortLane[hero:GetUniqueID()]=hero
 		elseif string.find(v, "Long") then
