@@ -1009,7 +1009,7 @@ object.lanePreferences = {
 }
 
 local nHighestCombo = 0
-local tCombinations = {}
+object.tCombinations = {}
 --local nNumBots = core.NumberElements(self.tAllyBotHeroes)
 
 -- This is to make sure that a terrible lane for a bot won't be forced onto it unless absolutely necessary.
@@ -1030,10 +1030,10 @@ local function sumPreferences(tPossibleLanes, nIndex, nSum, tCurrentLanes)
 			tinsert(tNewCurrentLanes, tPossibleLanes[i])
 			if nSum > nHighestCombo then
 				nHighestCombo = nSum
-				tCombinations = {}
-				tinsert(tCombinations, tNewCurrentLanes)
+				object.tCombinations = {}
+				tinsert(object.tCombinations, tNewCurrentLanes)
 			elseif nSum == nHighestCombo then
-				tinsert(tCombinations, tNewCurrentLanes)
+				tinsert(object.tCombinations, tNewCurrentLanes)
 			end
 		elseif nSum + ((core.NumberElements(object.tBotsLeft) - nIndex) * tValueMultipliers[#tValueMultipliers]) >= nHighestCombo then 
 			-- Stop looking through this branch if there is no way we could compete with the current highest score
@@ -1195,12 +1195,13 @@ function object:BuildLanes()
 	end
 	
 	BotEcho("There are "..core.NumberElements(object.lanePreferences).." prefs, and "..core.NumberElements(object.tBotsLeft).." bots left")
-	--Sort our best combinations into tCombinations
-	sumPreferences(tPossibleLanes, 1, 0, {})-- tCombinations now holds the best combinations of heroes
+	--Sort our best combinations into object.tCombinations
+	object.tCombinations={}
+	sumPreferences(tPossibleLanes, 1, 0, {})-- object.tCombinations now holds the best combinations of heroes
 	
 	--Assign bots to lane.
-	BotEcho("highest combination was with "..nHighestCombo.." and there was "..#tCombinations)
-	for k,v in pairs(tCombinations[1]) do --just pick first combo for now.
+	BotEcho("highest combination was with "..nHighestCombo.." and there was "..#object.tCombinations)
+	for k,v in pairs(object.tCombinations[1]) do --just pick first combo for now.
 		--BotEcho("--------------- idea "..k.." -------------------------")
 		--for k,v in pairs(v) do
 		--end
