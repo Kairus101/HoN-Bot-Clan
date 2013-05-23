@@ -79,10 +79,10 @@ function object:TeamBotBrainInitialize()
 end
 
 --Time left before the match starts when the bots should move to lane
-object.nInitialBotMove = 15000
+object.nInitialBotMove = 20000
 
 object.bLanesBuilt = false
-object.laneDoubleCheckTime = 17000 --time after start to double check our lane decisions
+object.laneDoubleCheckTime = 15000 --time after start to double check our lane decisions
 object.bLanesDoubleChecked = false
 object.laneReassessTime = 0
 object.laneReassessInterval = core.MinToMS(3) --regular interval to check for player lane switches
@@ -1161,6 +1161,75 @@ function guessLanePreference2(unitHero)
 	end
 
 	return tPref
+end
+
+function guessLanePreference3(unitHero)
+	local tPreferences = {Jungle = 0, Mid = 0, ShortSolo = 0, LongSolo = 0, ShortSupport = 0, LongSupport = 0, ShortCarry = 0, LongCarry = 0, hero = unitHero}
+
+	local sPrimaryAttribute = unitHero:GetPrimaryAttribute()
+	
+	if (unitHero:GetAttackType() ~= "melee")
+		local nAttackRange = unitHero:GetAttackRange()
+		if sPrimaryAttribute == "agi" then
+			if nAttackRange > 500 then --long range, most likely a carry, ex: Flint, Emerald Warden, Valkyrie
+				tPreferences.ShortCarry = tPreferences.ShortCarry + 2
+				tPreferences.LongCarry = tPreferences.LongCarry + 2
+				tPreferences.Mid = tPreferences.Mid + 2
+				tPreferences.ShortSolo = tPreferences.ShortSolo + 1
+				tPreferences.LongSolo = tPreferences.LongSolo + 1
+			else --shorter range, engi, andro, MQ, CD
+				tPreferences.ShortCarry = tPreferences.ShortCarry + 1
+				tPreferences.LongCarry = tPreferences.LongCarry + 1
+			end
+		elseif sPrimaryAttribute == "int" then
+			tPreferences.ShortSupport = tPreferences.ShortSupport + 1
+			tPreferences.LongSupport = tPreferences.LongSupport + 1
+			if nAttackRange >= 450 then --long range int, most likely a semi-carry, pyro, aluna, rhaps, myrm, 
+				tPreferences.Mid = tPreferences.Mid + 1
+				tPreferences.ShortSolo = tPreferences.ShortSolo + 1
+				tPreferences.LongSolo = tPreferences.LongSolo + 1
+			end
+		else -- str, flux or midas atm
+			tPreferences.ShortCarry = tPreferences.ShortCarry + 1
+			tPreferences.LongCarry = tPreferences.LongCarry + 1
+		end
+	else --melee
+		if sPrimaryAttribute == "agi" then
+			tPreferences.ShortCarry = tPreferences.ShortCarry + 3
+			tPreferences.LongCarry = tPreferences.LongCarry + 2
+			tPreferences.ShortSolo = tPreferences.ShortSolo + 2
+			tPreferences.LongSolo = tPreferences.LongSolo + 1
+		elseif sPrimaryAttribute == "int" then
+			tPreferences.ShortSupport = tPreferences.ShortSupport + 1
+			tPreferences.LongSupport = tPreferences.LongSupport + 1
+		else -- str, flux or midas atm
+			tPreferences.ShortCarry = tPreferences.ShortCarry + 1
+			tPreferences.LongCarry = tPreferences.LongCarry + 1
+			tPreferences.ShortSupport = tPreferences.ShortSupport + 1
+			tPreferences.LongSupport = tPreferences.LongSupport + 1
+		end
+	end
+	
+	local nAvgDamage = (unitHero:GetFinalAttackDamageMax() + unitHero:GetFinalAttackDamageMin()) / 2
+	if nAvgDamage > 55 then
+		tPreferences.Mid = tPreferences.Mid + 2
+		tPreferences.ShortSolo = tPreferences.ShortSolo + 2
+		tPreferences.ShortCarry = tPreferences.ShortCarry + 1
+		tPreferences.LongCarry = tPreferences.LongCarry + 1
+	else
+		tPreferences.ShortSupport = tPreferences.ShortSupport + 1
+		tPreferences.LongSupport = tPreferences.LongSupport + 1
+	end
+	
+	local nHealth = unitHero:GetHealth()
+	local nAvgEHP = ((nHealth / (1 - unitHero:GetPhysicalResistance())) + (nHealth / (1 - unitHero:GetMagicResistance()))) / 2
+	if nAvgEHP > 850 then
+		tPreferences.Mid = tPreferences.Mid + 1
+		tPreferences.ShortSolo = tPreferences.ShortSolo + 1
+		tPreferences.LongSolo = tPreferences.LongSolo + 1
+	end
+	
+	return tPreferences
 end
 
 
