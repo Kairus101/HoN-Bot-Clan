@@ -44,6 +44,7 @@ object.tAllyBotHeroes = {}
 object.tTopLane = {}
 object.tMiddleLane = {}
 object.tBottomLane = {}
+object.tJungle = {}
 
 object.teamBotBrainInitialized = false
 function object:TeamBotBrainInitialize()
@@ -998,30 +999,34 @@ Method 2 (bot preference based):
 object.nLaneProximityThreshold = 0.60 --how close you need to be (percentage-wise) to be "in" a lane
 
 object.teamBotBrain = object.teamBotBrain or {}
-
+teamBotBrain=object.teamBotBrain
 teamBotBrain.lanePreferences = {
-	{ Jungle = 0, Mid = 1, ShortSolo = 1, LongSolo = 1, ShortSupport = 5, LongSupport = 5, ShortCarry = 1, LongCarry = 1 , name = "empath" },
-	{ Jungle = 0, Mid = 5, ShortSolo = 2, LongSolo = 1, ShortSupport = 1, LongSupport = 1, ShortCarry = 3, LongCarry = 3 , name = "pebbs" },
-	{ Jungle = 5, Mid = 2, ShortSolo = 2, LongSolo = 1, ShortSupport = 1, LongSupport = 1, ShortCarry = 2, LongCarry = 2 , name = "lego" },
-	{ Jungle = 0, Mid = 2, ShortSolo = 4, LongSolo = 5, ShortSupport = 3, LongSupport = 4, ShortCarry = 2, LongCarry = 2 , name = "plague" },
-	{ Jungle = 0, Mid = 5, ShortSolo = 4, LongSolo = 1, ShortSupport = 1, LongSupport = 1, ShortCarry = 4, LongCarry = 3 , name = "soulStealer" }
+--	{ Jungle = 0, Mid = 1, ShortSolo = 1, LongSolo = 1, ShortSupport = 5, LongSupport = 5, ShortCarry = 1, LongCarry = 1 , hero = {} },
+--	{ Jungle = 0, Mid = 5, ShortSolo = 2, LongSolo = 1, ShortSupport = 1, LongSupport = 1, ShortCarry = 3, LongCarry = 3 , hero = {} },
+--	{ Jungle = 5, Mid = 2, ShortSolo = 2, LongSolo = 1, ShortSupport = 1, LongSupport = 1, ShortCarry = 2, LongCarry = 2 , hero = {} },
+--	{ Jungle = 0, Mid = 2, ShortSolo = 4, LongSolo = 5, ShortSupport = 3, LongSupport = 4, ShortCarry = 2, LongCarry = 2 , hero = {} },
+--	{ Jungle = 0, Mid = 5, ShortSolo = 4, LongSolo = 1, ShortSupport = 1, LongSupport = 1, ShortCarry = 4, LongCarry = 3 , hero = {} }
 }
 
 local nHighestCombo = 0
 local tCombinations = {}
-local nNumBots = core.NumberElements(self.tAllyBotHeroes)
+--local nNumBots = core.NumberElements(self.tAllyBotHeroes)
 
 -- This is to make sure that a terrible lane for a bot won't be forced onto it unless absolutely necessary.
-local tValueMultipliers = {-3, -1, 1, 2, 3, 5} 
+local tValueMultipliers = {-3, -1, 1, 2, 3, 5}
+
+--This is filled later.
+local tBotsLeft
 	
 -- Recurrsive function to Loop through every possible bot combination and add the sums
 local function sumPreferences(tPossibleLanes, nIndex, nSum, tCurrentLanes)
 	local nOrigSum = nSum
 	for i = 1, #tPossibleLanes do 
+		--BotEcho("Looking at bot "..nIndex.." lane "..i)
 		-- Iterate over the remaining lanes
 		--             /   multiplier  /  look into bots table  /  get bot     /get lane
-		nSum = nOrigSum + tValueMultipliers[teamBotBrain.lanePreferences[nIndex][tPossibleLanes[i]] + 1]
-		if nIndex == nNumBots then 
+		nSum = nOrigSum + tValueMultipliers[teamBotBrain.lanePreferences[nIndex][tPossibleLanes[i]] + 1]-- +1 as lanePreferences starts at 0
+		if nIndex == core.NumberElements(tBotsLeft) then 
 			-- Last unit, no need to search deeper.
 			local tNewCurrentLanes = core.CopyTable(tCurrentLanes)
 			tinsert(tNewCurrentLanes, tPossibleLanes[i])
@@ -1032,7 +1037,7 @@ local function sumPreferences(tPossibleLanes, nIndex, nSum, tCurrentLanes)
 			elseif nSum == nHighestCombo then
 				tinsert(tCombinations, tNewCurrentLanes)
 			end
-		elseif nSum + ((nNumBots - nIndex) * tValueMultipliers[#tValueMultipliers]) >= nHighestCombo then 
+		elseif nSum + ((core.NumberElements(tBotsLeft) - nIndex) * tValueMultipliers[#tValueMultipliers]) >= nHighestCombo then 
 			-- Stop looking through this branch if there is no way we could compete with the current highest score
 			local tNewCurrentLanes = core.CopyTable(tCurrentLanes)
 			tinsert(tNewCurrentLanes, tPossibleLanes[i])
@@ -1061,6 +1066,15 @@ local function sumPreferences(tPossibleLanes, nIndex, nSum, tCurrentLanes)
 	end
 end
 
+tAlreadyLoadedPrefs={}
+function SetLanePreferences(tPrefs)
+	BotEcho("^yLOADING PREFERENCES FOR "..tPrefs.hero:GetTypeName())
+	if (not tAlreadyLoadedPrefs[tPrefs.hero:GetUniqueID()]) then
+		tinsert(teamBotBrain.lanePreferences,tprefs)
+		tAlreadyLoadedPrefs[tPrefs.hero:GetUniqueID()]=true
+	end
+end
+
 function object:BuildLanes()
 	local bDebugEchos = false
 
@@ -1074,9 +1088,9 @@ function object:BuildLanes()
 	
 	
 	-- Check for players already in lane
-	local nDistToWellSq = Vector3.Distance2DSq(vecPosition, core.allyWell:GetPosition())
 	for nID, unitHero in pairs(self.tAllyHumanHeroes) do
 		local vecPosition = unitHero:GetPosition()
+		local nDistToWellSq = Vector3.Distance2DSq(vecPosition, core.allyWell:GetPosition())
 		if nDistToWellSq > (1200 * 1200) then
 			local tLaneBreakdown = core.GetLaneBreakdown(unitHero)
 			if tLaneBreakdown["mid"] >= self.nLaneProximityThreshold then
@@ -1086,12 +1100,8 @@ function object:BuildLanes()
 				if false and core.myTeam == HoN.GetHellbourneTeam() then
 				
 				
-				
-				
 					-- HELLBOURNE JUNGLE CHECK IS HERE
 					-- The false in the if statement should be a check for if the player is in the jungle
-					
-					
 					
 					
 					tJungle[nID] = unitHero
@@ -1101,12 +1111,8 @@ function object:BuildLanes()
 				if false and core.myTeam == HoN.GetLegionTeam() then
 				
 				
-			
-				
 					-- LEGION JUNGLE CHECK IS HERE
 					-- The false in the if statement should be a check for if the player is in the jungle
-					
-					
 					
 					
 					tJungle[nID] = unitHero
@@ -1114,9 +1120,10 @@ function object:BuildLanes()
 			end			
 		end
 	end
+	
+	tBotsLeft = core.CopyTable(self.tAllyBotHeroes)
 
 	-- Tutorial
-	local tBotsLeft = core.CopyTable(self.tAllyBotHeroes)
 	if core.bIsTutorial and core.myTeam == HoN.GetLegionTeam() then
 		if bDebugEchos then BotEcho("BuildLanes - Tutorial!") end
 		local unitSpecialBot = nil
@@ -1155,15 +1162,9 @@ function object:BuildLanes()
 	
 	-- ASSIGN teamBotBrain.lanePreferences TO HUMAN PLAYERS
 	-- Guess each human players preferences based on their location, range, primary attribute
-
 	
 	
 	
-	
-	
-	sumPreferences(tPossibleLanes, 1, 0, {})
-	-- tCombinations now holds the best combinations of heroes
-	-- I have no idea how tCombinations holds values so I didn't implement the rest
 	
 	local tLongLane = nil
 	local tShortLane = nil
@@ -1174,144 +1175,51 @@ function object:BuildLanes()
 		tLongLane = tBottomLane
 		tShortLane = tTopLane
 	end
-
 	
+	-- BOTS LANE ASSIGNMENT
 	
-	
-	
-	-- ASSIGN BOTS TO LANES HERE
-	
-	
-	
-
-	self.tTopLane = tTopLane
-	self.tMiddleLane = tMiddleLane
-	self.tBottomLane = tBottomLane
-end
-
-function object.FindBestLaneComplement(unitInLane, tAvailableHeroes)
-	if core.NumberElements(tAvailableHeroes) == 0 then
-		return nil
-	end
-	
-	local nLaneUnitRange = unitInLane:GetAttackRange()
-	
-	local tPairings = {}
-	for _, unitHero in pairs(tAvailableHeroes) do
-		local nRangeSum = nLaneUnitRange + unitHero:GetAttackRange()
-		tinsert(tPairings, {nRangeSum, unitHero})
-	end
-	
-	tsort(tPairings, function(a,b) return a[1] < b[1] end)
-	
-	local nSmallestRange = (tPairings[1])[1]
-	local nLargestRange = (tPairings[core.NumberElements(tPairings)])[1]
-	local nSetAverage = (nSmallestRange + nLargestRange) * 0.5
-	
-	local nSmallestDeviation = 99999
-	local nMostAverageSum = 0
-	local unitMostAverage = nil
-	for _, tPair in pairs(tPairings) do
-		local nCurrentDeviation = abs(tPair[1] - nSetAverage) 
-		if nCurrentDeviation < nSmallestDeviation or (nCurrentDeviation == nSmallestDeviation and tPair[1] > nMostAverageSum) then
-			nSmallestDeviation = nCurrentDeviation
-			nMostAverageSum = tPair[1]
-			unitMostAverage = tPair[2]
-		end
-	end
-	 
-	return unitMostAverage
-end
-
-function object.FindBestLanePair(tAvailableHeroes)
-	local bDebugEchos = false
-	
-	if core.NumberElements(tAvailableHeroes) == 0 then
-		return nil, nil
-	end
-
-	if bDebugEchos then
-		BotEcho('FindBestLanePair\ntAvailableHeroes:')
-		for key, hero in pairs(tAvailableHeroes) do
-			Echo("    "..hero:GetAttackRange().."  "..hero:GetTypeName())
-		end
-	end
-	
-	local tPairings = {}
-	for _, unitA in pairs(tAvailableHeroes) do
-		local bKeepSkipping = true
-		for _, unitB in pairs(tAvailableHeroes) do
-			if bKeepSkipping and unitA == unitB then
-				bKeepSkipping = false
-			elseif not bKeepSkipping then
-				local nRangeSum = unitA:GetAttackRange() + unitB:GetAttackRange()
-				tinsert(tPairings, {nRangeSum, unitA, unitB})
+	--get preferences from bots.
+	if (#teamBotBrain.lanePreferences < core.NumberElements(tBotsLeft) ) then
+		for _,unitHero in pairs(tBotsLeft) do
+			if (tAlreadyLoadedPrefs[unitHero:GetUniqueID()]) then
+				BotEcho(unitHero:GetTypeName().." had a lane list!")
+				tinsert(teamBotBrain.lanePreferences,unitHero.lanePreferences)
+			else --we need to guess what the bots role is
+				local tGuessedRole={ Jungle = 0, Mid = 1, ShortSolo = 1, LongSolo = 1, ShortSupport = 5, LongSupport = 5, ShortCarry = 1, LongCarry = 1 , hero = unitHero }
+				BotEcho(unitHero:GetTypeName().." didn't have a lane list. Defaulting.")
+				tinsert(teamBotBrain.lanePreferences,tGuessedRole)
 			end
 		end
 	end
 	
-	if #tPairings == 0 then
-		BotEcho('FindBestLanePair - unable to find pair!')
-		return nil, nil
-	end
+	BotEcho("There are "..#teamBotBrain.lanePreferences.." prefs, and "..core.NumberElements(tBotsLeft).." bots left")
+	--Sort our best combinations into tCombinations
+	sumPreferences(tPossibleLanes, 1, 0, {})-- tCombinations now holds the best combinations of heroes
 	
-	tsort(tPairings, function(a,b) return a[1] < b[1] end)
-	
-	if bDebugEchos then
-		BotEcho('Pairings:')
-		for key, tPair in pairs(tPairings) do
-			Echo("  "..tPair[1].."  "..tPair[2]:GetTypeName().."  "..tPair[3]:GetTypeName())
+	--Assign bots to lane.
+	BotEcho("highest combination was with "..nHighestCombo.." and there was "..#tCombinations)
+	for k,v in pairs(tCombinations[1]) do --just pick first combo for now.
+		--BotEcho("--------------- idea "..k.." -------------------------")
+		--for k,v in pairs(v) do
+		--end
+		local hero=teamBotBrain.lanePreferences[k].hero
+		BotEcho(hero:GetTypeName()..":".. v)
+		if string.find(v, "Short") then
+			tShortLane[hero:GetUniqueID()]=hero
+		elseif string.find(v, "Long") then
+			tLongLane[hero:GetUniqueID()]=hero
+		elseif string.find(v, "Mid") then
+			tMiddleLane[hero:GetUniqueID()]=hero
+		elseif string.find(v, "Jungle") then
+			tJungle[hero:GetUniqueID()]=hero
 		end
-	end
-	
-	local tSmallestPair = tPairings[1]
-	local nSmallestRange = tSmallestPair[1]
-	
-	local tLargestPair = tPairings[#tPairings]
-	local nLargestRange = tLargestPair[1]
-	
-	local nSetAverage = (nSmallestRange + nLargestRange) * 0.5
-	
-	if bDebugEchos then BotEcho(format("RangeSums - nSmallest: %d  nLargest: %d  nAverage: %d", nSmallestRange, nLargestRange, nSetAverage)) end
-	
-	local nSmallestDeviation = 99999
-	local nMostAverageSum = 0
-	local tMostAveragePair = nil
-	for _, tPair in pairs(tPairings) do
-		local nCurrentDeviation = abs(tPair[1] - nSetAverage)
-		if bDebugEchos then BotEcho("Checking "..nCurrentDeviation.." vs "..nSmallestDeviation.." for pair ["..tPair[2]:GetTypeName().."  "..tPair[3]:GetTypeName().."]") end
-		if nCurrentDeviation < nSmallestDeviation or (nCurrentDeviation == nSmallestDeviation and tPair[1] > nMostAverageSum) then
-			if bDebugEchos then BotEcho("  Better pair!  "..tPair[2]:GetTypeName().." "..tPair[3]:GetTypeName()) end
-			nSmallestDeviation = nCurrentDeviation
-			nMostAverageSum = tPair[1]
-			tMostAveragePair = {tPair[2], tPair[3]}
-		end
-	end
-	
-	if tMostAveragePair ~= nil then
-		return tMostAveragePair[1], tMostAveragePair[2]
-	end
-	
-	BotEcho('FindBestLanePair - unable to find pair!')
-	return nil, nil
-end
-
-function object.FindBestLaneSolo(tAvailableHeroes)
-	if core.NumberElements(tAvailableHeroes) == 0 then
-		return nil, nil
+		BotEcho("Set "..hero:GetTypeName().." to "..v)
 	end
 
-	local nLargestRange = 0
-	local unitBestUnit = nil
-	for _, unit in pairs(tAvailableHeroes) do
-		local nCurrentRange = unit:GetAttackRange() 
-		if nCurrentRange > nLargestRange then
-			nLargestRange = nCurrentRange
-			unitBestUnit = unit
-		end
-	end
-	
-	return unitBestUnit
+	self.tTopLane = tTopLane
+	self.tMiddleLane = tMiddleLane
+	self.tBottomLane = tBottomLane
+	self.tJungle = tJungle
 end
 
 function object:GetDesiredLane(unitAsking)	
@@ -1324,6 +1232,8 @@ function object:GetDesiredLane(unitAsking)
 			return metadata.GetMiddleLane()
 		elseif self.tBottomLane[nUniqueID] then
 			return metadata.GetBottomLane()
+		elseif self.tJungle[nUniqueID] then
+			return {} --this needs some modification.
 		end
 		
 		BotEcho("Couldn't find a lane for unit: "..tostring(unitAsking)..'  name: '..unitAsking:GetTypeName()..'  id: '..nUniqueID)
