@@ -1072,7 +1072,9 @@ function object:SetLanePreferences(tPrefs)
 	end
 end
 
+
 function guessLanePreference(unitHero)
+
 	local tPreferences = {Jungle = 0, Mid = 0, ShortSolo = 0, LongSolo = 0, ShortSupport = 0, LongSupport = 0, ShortCarry = 0, LongCarry = 0, hero = unitHero}
 
 	local sPrimaryAttribute = unitHero:GetPrimaryAttribute()
@@ -1128,6 +1130,39 @@ function guessLanePreference(unitHero)
 	
 	return tPreferences
 end
+
+
+function guessLanePreference2(unitHero)
+	local sPrimaryAttribute = unitHero:GetPrimaryAttribute()
+	local tPref
+
+	if unitHero:GetAttackType() == "melee" then
+		if sPrimaryAttribute == "agi" then 		-- ex: Scout, Magebane, Swiftblade, Sandwraith
+			tPref = {Jungle = 0, Mid = 2, ShortSolo = 2, LongSolo = 1,
+					ShortSupport = 1, LongSupport = 1, ShortCarry = 4, LongCarry = 3, hero = unitHero}
+		elseif sPrimaryAttribute == "int" then 	-- ex: Blacksmith, Oogie, Parasite, 
+			tPref = {Jungle = 0, Mid = 2, ShortSolo = 2, LongSolo = 1,
+					ShortSupport = 3, LongSupport = 3, ShortCarry = 2, LongCarry = 2, hero = unitHero}
+		else									-- ex: Hammerstorm, Panda, Magmus, Accursed
+			tPref = {Jungle = 0, Mid = 2, ShortSolo = 2, LongSolo = 2,
+					ShortSupport = 2, LongSupport = 2, ShortCarry = 3, LongCarry = 3, hero = unitHero}
+		end
+	else --Range
+		if sPrimaryAttribute == "agi" then 		-- ex: Flint, Emerald Warden, Valkyrie, 
+			tPref = {Jungle = 0, Mid = 4, ShortSolo = 3, LongSolo = 2,
+					ShortSupport = 1, LongSupport = 1, ShortCarry = 3, LongCarry = 3, hero = unitHero}
+		elseif sPrimaryAttribute == "int" then 	-- ex: Torturer, Aluna, Pyromancer, Hag
+			tPref = {Jungle = 0, Mid = 3, ShortSolo = 2, LongSolo = 2,
+					ShortSupport = 3, LongSupport = 3, ShortCarry = 1, LongCarry = 1, hero = unitHero}
+		else 									-- ex: Midas, Flux
+			tPref = {Jungle = 0, Mid = 2, ShortSolo = 2, LongSolo = 2,
+					ShortSupport = 2, LongSupport = 2, ShortCarry = 3, LongCarry = 3, hero = unitHero}
+		end
+	end
+
+	return tPref
+end
+
 
 function object:BuildLanes()
 	local bDebugEchos = false
