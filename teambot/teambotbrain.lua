@@ -1232,6 +1232,17 @@ function guessLanePreference3(unitHero)
 	return tPreferences
 end
 
+function getBestCombination() --this is a tiebreaker for top combos. I'm unsure what to add here, but this function is a placeholder.
+	return 1 --just return the first found combo for now.
+	--[[
+	for i=1,#object.tCombinations do
+		for key, value in pairs(object.tCombinations[i]) do
+			--several checks to rate lane setup
+		end
+	end
+	return bestSetup
+	]]
+end
 
 function object:BuildLanes()
 	local bDebugEchos = false
@@ -1341,7 +1352,7 @@ function object:BuildLanes()
 	end
 	
 	--Assign bots to lane.
-	for key, value in pairs(object.tCombinations[1]) do
+	for key, value in pairs(object.tCombinations[getBestCombination()]) do
 		local hero = object.lanePreferences[key].hero
 		if string.find(value, "Short") then
 			tShortLane[hero:GetUniqueID()] = hero
