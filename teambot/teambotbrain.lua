@@ -998,24 +998,20 @@ Method 2 (bot preference based):
 
 object.nLaneProximityThreshold = 0.60 --how close you need to be (percentage-wise) to be "in" a lane
 
-object.teamBotBrain = object.teamBotBrain or {}
-teamBotBrain=object.teamBotBrain
 object.lanePreferences = {
---	{ Jungle = 0, Mid = 1, ShortSolo = 1, LongSolo = 1, ShortSupport = 5, LongSupport = 5, ShortCarry = 1, LongCarry = 1 , hero = {} },
---	{ Jungle = 0, Mid = 5, ShortSolo = 2, LongSolo = 1, ShortSupport = 1, LongSupport = 1, ShortCarry = 3, LongCarry = 3 , hero = {} },
---	{ Jungle = 5, Mid = 2, ShortSolo = 2, LongSolo = 1, ShortSupport = 1, LongSupport = 1, ShortCarry = 2, LongCarry = 2 , hero = {} },
---	{ Jungle = 0, Mid = 2, ShortSolo = 4, LongSolo = 5, ShortSupport = 3, LongSupport = 4, ShortCarry = 2, LongCarry = 2 , hero = {} },
---	{ Jungle = 0, Mid = 5, ShortSolo = 4, LongSolo = 1, ShortSupport = 1, LongSupport = 1, ShortCarry = 4, LongCarry = 3 , hero = {} }
+--	{ Jungle = 0, Mid = 1, ShortSolo = 1, LongSolo = 1, ShortSupport = 5, LongSupport = 5, ShortCarry = 1, LongCarry = 1 , hero = nil },
+--	{ Jungle = 0, Mid = 5, ShortSolo = 2, LongSolo = 1, ShortSupport = 1, LongSupport = 1, ShortCarry = 3, LongCarry = 3 , hero = nil },
+--	{ Jungle = 5, Mid = 2, ShortSolo = 2, LongSolo = 1, ShortSupport = 1, LongSupport = 1, ShortCarry = 2, LongCarry = 2 , hero = nil },
+--	{ Jungle = 0, Mid = 2, ShortSolo = 4, LongSolo = 5, ShortSupport = 3, LongSupport = 4, ShortCarry = 2, LongCarry = 2 , hero = nil },
+--	{ Jungle = 0, Mid = 5, ShortSolo = 4, LongSolo = 1, ShortSupport = 1, LongSupport = 1, ShortCarry = 4, LongCarry = 3 , hero = nil }
 }
 
 local nHighestCombo = 0
 object.tCombinations = {}
---local nNumBots = core.NumberElements(self.tAllyBotHeroes)
 
 -- This is to make sure that a terrible lane for a bot won't be forced onto it unless absolutely necessary.
 local tValueMultipliers = {-3, -1, 1, 2, 3, 5}
 
-	
 -- Recurrsive function to Loop through every possible bot combination and add the sums
 local function sumPreferences(tPossibleLanes, nIndex, nSum, tCurrentLanes)
 	local nOrigSum = nSum
@@ -1064,16 +1060,73 @@ local function sumPreferences(tPossibleLanes, nIndex, nSum, tCurrentLanes)
 	end
 end
 
-object.tAlreadyLoadedPrefs={}
+object.tAlreadyLoadedPrefs = {}
 function object:SetLanePreferences(tPrefs)
-	if (tPrefs) then
-		BotEcho("^yLOADING PREFERENCES FOR "..tPrefs.hero:GetTypeName())
-		if (not object.tAlreadyLoadedPrefs[tPrefs.hero:GetUniqueID()]) then
-			object.tAlreadyLoadedPrefs[tPrefs.hero:GetUniqueID()]=tPrefs
+	if tPrefs then
+		BotEcho("^yLoading Lane Preferences for: "..tPrefs.hero:GetTypeName())
+		if not object.tAlreadyLoadedPrefs[tPrefs.hero:GetUniqueID()] then
+			object.tAlreadyLoadedPrefs[tPrefs.hero:GetUniqueID()] = tPrefs
 		end
 	else
 		BotEcho("TPREFS IS NIL!")
 	end
+end
+
+function guessLanePreference(unitHero)
+	local tPreferences = {Jungle = 0, Mid = 0, ShortSolo = 0, LongSolo = 0, ShortSupport = 0, LongSupport = 0, ShortCarry = 0, LongCarry = 0, hero = unitHero}
+
+	local sPrimaryAttribute = unitHero:GetPrimaryAttribute()
+	if sPrimaryAttribute == "agi" then
+		tPreferences.ShortCarry = tPreferences.ShortCarry + 2
+		tPreferences.LongCarry = tPreferences.LongCarry + 2
+	elseif sPrimaryAttribute == "int" then
+		tPreferences.ShortSupport = tPreferences.ShortSupport + 2
+		tPreferences.LongSupport = tPreferences.LongSupport + 2
+	else
+		tPreferences.ShortSupport = tPreferences.ShortSupport + 1
+		tPreferences.LongSupport = tPreferences.LongSupport + 1
+		tPreferences.ShortCarry = tPreferences.ShortCarry + 1
+		tPreferences.LongCarry = tPreferences.LongCarry + 1
+	end
+	
+	local nAttackRange = unitHero:GetAttackRange()
+	if nAttackRange > 400 then
+		tPreferences.Mid = tPreferences.Mid + 2
+		tPreferences.ShortSolo = tPreferences.ShortSolo + 1
+		tPreferences.LongSolo = tPreferences.LongSolo + 1
+		tPreferences.ShortSupport = tPreferences.ShortSupport + 1
+		tPreferences.LongSupport = tPreferences.LongSupport + 1
+	else
+		tPreferences.ShortCarry = tPreferences.ShortCarry + 1
+		tPreferences.LongCarry = tPreferences.LongCarry + 1
+	end
+	
+	local nAvgDamage = (unitHero:GetFinalAttackDamageMax() + unitHero:GetFinalAttackDamageMin()) / 2
+	if nAvgDamage > 55 then
+		tPreferences.Mid = tPreferences.Mid + 2
+		tPreferences.ShortSolo = tPreferences.ShortSolo + 1
+		tPreferences.LongSolo = tPreferences.LongSolo + 1
+		tPreferences.ShortSupport = tPreferences.ShortSupport + 1
+		tPreferences.LongSupport = tPreferences.LongSupport + 1
+	else
+		tPreferences.ShortCarry = tPreferences.ShortCarry + 1
+		tPreferences.LongCarry = tPreferences.LongCarry + 1
+	end
+	
+	local nHealth = unitHero:GetHealth()
+	local nAvgEHP = ((nHealth / (1 - unitHero:GetPhysicalResistance())) + (nHealth / (1 - unitHero:GetMagicResistance()))) / 2
+	if nAvgEHP > 850 then
+		tPreferences.Mid = tPreferences.Mid + 1
+		tPreferences.ShortSolo = tPreferences.ShortSolo + 1
+		tPreferences.LongSolo = tPreferences.LongSolo + 1
+		tPreferences.ShortSupport = tPreferences.ShortSupport + 1
+		tPreferences.LongSupport = tPreferences.LongSupport + 1
+	else
+		tPreferences.ShortCarry = tPreferences.ShortCarry + 1
+		tPreferences.LongCarry = tPreferences.LongCarry + 1
+	end
+	
+	return tPreferences
 end
 
 function object:BuildLanes()
@@ -1085,9 +1138,7 @@ function object:BuildLanes()
 	local tJungle = {}
 	
 	local tPossibleLanes = {"Jungle", "Mid", "ShortSolo", "LongSolo", "ShortSupport", "LongSupport", "ShortCarry", "LongCarry"}
-	-- Need to remove values from tPossibleLanes to account for Human players in the loop below
-	
-	
+
 	-- Check for players already in lane
 	for nID, unitHero in pairs(self.tAllyHumanHeroes) do
 		local vecPosition = unitHero:GetPosition()
@@ -1158,14 +1209,22 @@ function object:BuildLanes()
 		end
 	end	
 	-- /Tutorial
-	
 
+	-- Get preferences from bots.
+	if core.NumberElements(object.lanePreferences) < core.NumberElements(object.tBotsLeft) then
+		for _, unitHero in pairs(object.tBotsLeft) do
+			if object.tAlreadyLoadedPrefs[unitHero:GetUniqueID()] then
+				tinsert(object.lanePreferences, object.tAlreadyLoadedPrefs[unitHero:GetUniqueID()])
+			else
+				local tGuessedLanePreference = guessLanePreference(unitHero)
+				tinsert(object.lanePreferences, tGuessedRole)
+			end
+		end
+	end
 	
-	-- ASSIGN object.lanePreferences TO HUMAN PLAYERS
-	-- Guess each human players preferences based on their location, range, primary attribute
-	
-	
-	
+	-- Sort our best combinations into object.tCombinations
+	object.tCombinations = {}
+	sumPreferences(tPossibleLanes, 1, 0, {})
 	
 	local tLongLane = nil
 	local tShortLane = nil
@@ -1177,51 +1236,24 @@ function object:BuildLanes()
 		tShortLane = tTopLane
 	end
 	
-	-- BOTS LANE ASSIGNMENT
-	
-	--get preferences from bots.
-	if (core.NumberElements(object.lanePreferences) < core.NumberElements(object.tBotsLeft) ) then
-		for _,unitHero in pairs(object.tBotsLeft) do
-			if (object.tAlreadyLoadedPrefs[unitHero:GetUniqueID()]) then
-				BotEcho(unitHero:GetTypeName().." had a lane list!")
-				tinsert(object.lanePreferences,object.tAlreadyLoadedPrefs[unitHero:GetUniqueID()])
-				
-			else --we need to guess what the bots role is
-				local tGuessedRole={ Jungle = 0, Mid = 1, ShortSolo = 1, LongSolo = 1, ShortSupport = 5, LongSupport = 5, ShortCarry = 1, LongCarry = 1 , hero = unitHero }
-				BotEcho(unitHero:GetTypeName().." didn't have a lane list. Defaulting.")
-				tinsert(object.lanePreferences,tGuessedRole)
-			end
-		end
-	end
-	
-	BotEcho("There are "..core.NumberElements(object.lanePreferences).." prefs, and "..core.NumberElements(object.tBotsLeft).." bots left")
-	--Sort our best combinations into object.tCombinations
-	object.tCombinations={}
-	sumPreferences(tPossibleLanes, 1, 0, {})-- object.tCombinations now holds the best combinations of heroes
-	
 	--Assign bots to lane.
-	BotEcho("highest combination was with "..nHighestCombo.." and there was "..#object.tCombinations)
-	for k,v in pairs(object.tCombinations[1]) do --just pick first combo for now.
-		--BotEcho("--------------- idea "..k.." -------------------------")
-		--for k,v in pairs(v) do
-		--end
-		local hero=object.lanePreferences[k].hero
-		if string.find(v, "Short") then
-			tShortLane[hero:GetUniqueID()]=hero
-		elseif string.find(v, "Long") then
-			tLongLane[hero:GetUniqueID()]=hero
-		elseif string.find(v, "Mid") then
-			tMiddleLane[hero:GetUniqueID()]=hero
-		elseif string.find(v, "Jungle") then
-			tJungle[hero:GetUniqueID()]=hero
+	for key, value in pairs(object.tCombinations[1]) do
+		local hero = object.lanePreferences[key].hero
+		if string.find(value, "Short") then
+			tShortLane[hero:GetUniqueID()] = hero
+		elseif string.find(value, "Long") then
+			tLongLane[hero:GetUniqueID()] = hero
+		elseif string.find(value, "Mid") then
+			tMiddleLane[hero:GetUniqueID()] = hero
+		elseif string.find(value, "Jungle") then
+			-- For right now we will pretend that units in jungle are in the short lane
+			tShortLane[hero:GetUniqueID()] = hero
 		end
-		BotEcho("Set "..hero:GetTypeName().." to "..v)
 	end
 
 	self.tTopLane = tTopLane
 	self.tMiddleLane = tMiddleLane
 	self.tBottomLane = tBottomLane
-	self.tJungle = tJungle
 end
 
 function object:GetDesiredLane(unitAsking)	
@@ -1234,8 +1266,6 @@ function object:GetDesiredLane(unitAsking)
 			return metadata.GetMiddleLane()
 		elseif self.tBottomLane[nUniqueID] then
 			return metadata.GetBottomLane()
-		elseif self.tJungle[nUniqueID] then
-			return {} --this needs some modification.
 		end
 		
 		BotEcho("Couldn't find a lane for unit: "..tostring(unitAsking)..'  name: '..unitAsking:GetTypeName()..'  id: '..nUniqueID)
