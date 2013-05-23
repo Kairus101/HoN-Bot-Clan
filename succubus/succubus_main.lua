@@ -115,7 +115,11 @@ local function funcFindItemsOverride(botBrain)
 		core.itemPortalKey = nil
 	end
 
-	if core.itemPortalKey then
+	if core.itemPuzzlebox ~= nil and not core.itemPuzzlebox:IsValid() then
+		core.itemPortalKey = nil
+	end
+
+	if core.itemPortalKey and core.itemPuzzlebox then
 		return
 	end
 
@@ -125,6 +129,8 @@ local function funcFindItemsOverride(botBrain)
 		if curItem then
 			if core.itemPortalKey == nil and curItem:GetName() == "Item_PortalKey" then
 				core.itemPortalKey = core.WrapInTable(curItem)
+			elseif core.itemPuzzlebox == nil and curItem:GetName() == "Item_Summon" then
+				core.itemPuzzlebox = core.WrapInTable(curItem)
 			end
 		end
 	end
@@ -160,6 +166,7 @@ function behaviorLib.RetreatFromThreatExecuteOverride(botBrain)
 	local heartacheCanActivate = skills.heartache:CanActivate()
 	local bActionTaken = false
 
+	bottle.drink(botBrain)
 
 	if lastRetreatUtil > object.retreatCastThreshold then
 		for _,hero in pairs(core.localUnits["EnemyHeroes"]) do
@@ -318,7 +325,11 @@ local function HarassHeroExecuteOverride(botBrain)
 
 	if not bActionTaken and bCanSee then
 		if nLastHarassUtility > object.holdThreshold and skills.hold:CanActivate() then
-			bActionTaken = core.OrderAbilityEntity(botBrain, skills.hold, unitTarget)
+			if core.itemPuzzlebox and core.itemPuzzlebox:CanActivate() then
+				botBrain:OrderItem(core.itemPuzzlebox.object)
+			else
+				bActionTaken = core.OrderAbilityEntity(botBrain, skills.hold, unitTarget)
+			end
 		end
 		if not bActionTaken and nLastHarassUtility > object.heartacheThreshold and skills.heartache:CanActivate() then
 			bActionTaken = core.OrderAbilityEntity(botBrain, skills.heartache, unitTarget)
@@ -462,14 +473,25 @@ tinsert(behaviorLib.tBehaviors, behaviorLib.ManaBehavior)
 
 behaviorLib.runeToPick = nil
 function behaviorLib.PickRuneUtility(botBrain)
-	if bottle.getCharges() == 0 then
-		local rune = runelib.GetNearestRune()
-		if rune then
-			behaviorLib.runeToPick = rune
-			return 30
-		end
+	local utility = 0
+
+	local rune = runelib.GetNearestRune()
+	if rune == nil then
+		return 0
 	end
-	return 0
+
+
+	behaviorLib.runeToPick = rune
+
+	if rune.unit then
+		utility = utility + 10
+	end
+
+	if bottle.haveBottle() then
+		utility = utility + 30 - bottle.getCharges() * 5
+	end
+
+	return utility - Vector3.Distance2DSq(rune.location, core.unitSelf:GetPosition())/(2000*2000)
 end
 
 function behaviorLib.PickRuneExecute(botBrain)
