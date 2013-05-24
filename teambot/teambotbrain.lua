@@ -1168,7 +1168,7 @@ function guessLanePreference3(unitHero)
 
 	local sPrimaryAttribute = unitHero:GetPrimaryAttribute()
 	
-	if (unitHero:GetAttackType() ~= "melee")
+	if (unitHero:GetAttackType() ~= "melee") then
 		local nAttackRange = unitHero:GetAttackRange()
 		if sPrimaryAttribute == "agi" then
 			if nAttackRange > 500 then --long range, most likely a carry, ex: Flint, Emerald Warden, Valkyrie

@@ -1,7 +1,7 @@
 ----------------------------------------------
---                JungleLib                 --
+--                JungleLib v1              --
 ----------------------------------------------
---     Created by Kairus101 for legoBot     --
+--            Created by Kairus101          --
 ----------------------------------------------
 
 local _G = getfenv(0)
@@ -142,11 +142,4 @@ local time=HoN.GetMatchTime()
 		secs=floor((time-60000*mins)/1000)
 	end
 	return mins or -1,secs or -1
-end
-
-function jungleLib.stack(botBrain)
-	vSelfPos=core.unitSelf:GetPosition()
-	campPos=jungleLib.getNearestCampPos(vSelfPos)
-	local dist=Vector3.Distance2DSq(campPos, vSelfPos)
-	--UNFINISHED
 end
