@@ -79,10 +79,10 @@ function object:TeamBotBrainInitialize()
 end
 
 --Time left before the match starts when the bots should move to lane
-object.nInitialBotMove = 20000
+object.nInitialBotMove = 15000
 
 object.bLanesBuilt = false
-object.laneDoubleCheckTime = 15000 --time after start to double check our lane decisions
+object.laneDoubleCheckTime = 17000 --time after start to double check our lane decisions
 object.bLanesDoubleChecked = false
 object.laneReassessTime = 0
 object.laneReassessInterval = core.MinToMS(3) --regular interval to check for player lane switches
@@ -975,16 +975,6 @@ Preference for the above lanes/roles can be ranked by a bot using the following 
 4 = good
 5 = awsome
 
-Default values if left out of bot files:
-{ Jungle = 0, Mid = 2, ShortSolo = 2, LongSolo = 2, ShortSupport = 2, LongSupport = 2, ShortCarry = 2, LongCarry = 2 }
-
-Sample values for 'typical' bots:
-Empath: 	{ Jungle = 0, Mid = 1, ShortSolo = 1, LongSolo = 1, ShortSupport = 5, LongSupport = 5, ShortCarry = 1, LongCarry = 1 }
-Pebbles: 	{ Jungle = 0, Mid = 5, ShortSolo = 2, LongSolo = 1, ShortSupport = 1, LongSupport = 1, ShortCarry = 3, LongCarry = 3 }
-Legionaire:	{ Jungle = 5, Mid = 2, ShortSolo = 2, LongSolo = 1, ShortSupport = 1, LongSupport = 1, ShortCarry = 2, LongCarry = 2 }
-Plague: 	{ Jungle = 0, Mid = 2, ShortSolo = 4, LongSolo = 5, ShortSupport = 3, LongSupport = 4, ShortCarry = 2, LongCarry = 2 }
-
-
 Rough psuedo code ideas for calculating initial lane assignment:
 
 Method 2 (bot preference based):
@@ -1016,7 +1006,6 @@ local tValueMultipliers = {-3, -1, 1, 2, 3, 5}
 local function sumPreferences(tPossibleLanes, nIndex, nSum, tCurrentLanes)
 	local nOrigSum = nSum
 	for i = 1, #tPossibleLanes do 
-		--BotEcho("Looking at bot "..nIndex.." lane "..i)
 		-- Iterate over the remaining lanes
 		--             /   multiplier  /  look into bots table  /  get bot     /get lane
 		nSum = nOrigSum + tValueMultipliers[object.lanePreferences[nIndex][tPossibleLanes[i]] + 1]-- +1 as lanePreferences starts at 0
@@ -1202,7 +1191,7 @@ function guessLanePreference3(unitHero)
 		elseif sPrimaryAttribute == "int" then
 			tPreferences.ShortSupport = tPreferences.ShortSupport + 1
 			tPreferences.LongSupport = tPreferences.LongSupport + 1
-		else -- str, flux or midas atm
+		else -- str
 			tPreferences.ShortCarry = tPreferences.ShortCarry + 1
 			tPreferences.LongCarry = tPreferences.LongCarry + 1
 			tPreferences.ShortSupport = tPreferences.ShortSupport + 1
@@ -1325,6 +1314,8 @@ function object:BuildLanes()
 	end	
 	-- /Tutorial
 
+	object.lanePreferences={}
+	nHighestCombo=0
 	-- Get preferences from bots.
 	if core.NumberElements(object.lanePreferences) < core.NumberElements(object.tBotsLeft) then
 		for _, unitHero in pairs(object.tBotsLeft) do
@@ -1332,7 +1323,7 @@ function object:BuildLanes()
 				tinsert(object.lanePreferences, object.tAlreadyLoadedPrefs[unitHero:GetUniqueID()])
 			else
 				local tGuessedLanePreference = guessLanePreference(unitHero)
-				tinsert(object.lanePreferences, tGuessedRole)
+				tinsert(object.lanePreferences, tGuessedLanePreference)
 			end
 		end
 	end
@@ -1340,6 +1331,7 @@ function object:BuildLanes()
 	-- Sort our best combinations into object.tCombinations
 	object.tCombinations = {}
 	sumPreferences(tPossibleLanes, 1, 0, {})
+	--BotEcho("highest combination was with "..nHighestCombo.." and there was "..#object.tCombinations)
 	
 	local tLongLane = nil
 	local tShortLane = nil
@@ -1365,13 +1357,14 @@ function object:BuildLanes()
 			tShortLane[hero:GetUniqueID()] = hero
 		end
 	end
+	
 
 	self.tTopLane = tTopLane
 	self.tMiddleLane = tMiddleLane
 	self.tBottomLane = tBottomLane
 end
 
-function object:GetDesiredLane(unitAsking)	
+function object:GetDesiredLane(unitAsking)		
 	if unitAsking then
 		local nUniqueID = unitAsking:GetUniqueID()
 		
