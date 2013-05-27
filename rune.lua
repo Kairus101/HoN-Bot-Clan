@@ -16,45 +16,52 @@ local runelib = object.runelib
 
 local RUNE_UNIT_MASK = core.UNIT_MASK_POWERUP + core.UNIT_MASK_ALIVE
 
-local teambot = HoN.GetTeamBotBrain()
+local teambot = nil
 
 local runeNames = {"Powerup_Damage", "Powerup_Illusion", "Powerup_Stealth", "Powerup_Refresh", "Powerup_Regen", "Powerup_MoveSpeed", "Powerup_Super"}
 
-if teambot.runes == nil then
+function core.NewRuneCoreInitialize(controller)
+teambot = HoN.GetTeamBotBrain()
+	if teambot then
+		if teambot.runes == nil then
 
-	teambot.nextSpawnCheck = 120000 --2min mark
-	teambot.nextCheck = 120000
-	teambot.checkInterval = 1000
+			teambot.nextSpawnCheck = 120000 --2min mark
+			teambot.nextCheck = 120000
+			teambot.checkInterval = 1000
 
-	--todo add types expect "gereatter" and "lesser" rune so bot can go for better rune if it have vision
-	teambot.runes = {
-		{location = Vector3.Create(5824, 9728), unit=nil, picked = true},
-		{location = Vector3.Create(11136, 5376), unit=nil, picked = true}
-	}
+			--todo add types expect "gereatter" and "lesser" rune so bot can go for better rune if it have vision
+			teambot.runes = {
+				{location = Vector3.Create(5824, 9728), unit=nil, picked = true},
+				{location = Vector3.Create(11136, 5376), unit=nil, picked = true}
+			}
 
-	function teambot:runeLibOnthinkOverride(tGameVariables)
-		self:runeLibOnthinkOld(tGameVariables)-- old think
+			function teambot:runeLibOnthinkOverride(tGameVariables)
+				self:runeLibOnthinkOld(tGameVariables)-- old think
 
-		time = HoN.GetMatchTime()
-		if time and time > teambot.nextSpawnCheck then
-			teambot.nextSpawnCheck = teambot.nextSpawnCheck + 120000
-			for _,rune in pairs(teambot.runes) do
-				--something spawned
-				rune.picked = false
-				rune.unit = nil
+				time = HoN.GetMatchTime()
+				if time and time > teambot.nextSpawnCheck then
+					teambot.nextSpawnCheck = teambot.nextSpawnCheck + 120000
+					for _,rune in pairs(teambot.runes) do
+						--something spawned
+						rune.picked = false
+						rune.unit = nil
+					end
+					runelib.checkRunes()
+				end
+				if time and time > teambot.nextCheck then
+					teambot.nextCheck = teambot.nextCheck + teambot.checkInterval
+					runelib.checkRunes()
+				end
+
 			end
-			runelib.checkRunes()
+			teambot.runeLibOnthinkOld = teambot.onthink
+			teambot.onthink = teambot.runeLibOnthinkOverride
 		end
-		if time and time > teambot.nextCheck then
-			teambot.nextCheck = teambot.nextCheck + teambot.checkInterval
-			runelib.checkRunes()
-		end
-
 	end
-	teambot.runeLibOnthinkOld = teambot.onthink
-	teambot.onthink 	= teambot.runeLibOnthinkOverride
-
+	core.OldRuneCoreInitialize(controller)
 end --of editting teambot
+core.OldRuneCoreInitialize = core.CoreInitialize
+core.CoreInitialize = core.NewRuneCoreInitialize
 
 function runelib.checkRunes()
 	for _,rune in pairs(teambot.runes) do
