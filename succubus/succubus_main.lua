@@ -168,7 +168,9 @@ function behaviorLib.RetreatFromThreatExecuteOverride(botBrain)
 	local heartacheCanActivate = skills.heartache:CanActivate()
 	local bActionTaken = false
 
-	bottle.drink(botBrain)
+	if core.NumberElements(eventsLib.incomingProjectiles.all) == 0 then
+		bottle.drink(botBrain)
+	end
 
 	if lastRetreatUtil > object.retreatCastThreshold then
 		for _,hero in pairs(core.localUnits["EnemyHeroes"]) do
@@ -548,7 +550,7 @@ tinsert(behaviorLib.tBehaviors, behaviorLib.PickRuneBehavior)
 --    Misc    --
 ----------------
 
-function object.IsMagicImmune(unit)
+function IsMagicImmune(unit)
 	local states = { "State_Item3E", "State_Predator_Ability2", "State_Jereziah_Ability2", "State_Rampage_Ability1_Self", "State_Rhapsody_Ability4_Buff", "State_Hiro_Ability1" }
 	for _, state in ipairs(states) do
 		if unit:HasState(state) then
