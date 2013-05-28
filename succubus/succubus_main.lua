@@ -49,9 +49,7 @@ local Clamp = core.Clamp
 local bottle = object.bottle
 local runelib = object.runelib
 
-
 BotEcho(object:GetName()..' loading succubus_main...')
-
 
 ----------------------------------------------------------
 --  			  bot constant definitions				--
@@ -59,12 +57,11 @@ BotEcho(object:GetName()..' loading succubus_main...')
 
 object.heroName = 'Hero_Succubis'
 
-
 --   item buy order. internal names  
 behaviorLib.StartingItems  = {"Item_MarkOfTheNovice", "Item_MarkOfTheNovice", "Item_RunesOfTheBlight", "Item_MarkOfTheNovice"}
 behaviorLib.LaneItems  = {"Item_Bottle", "Item_EnhancedMarchers"}
 behaviorLib.MidItems  = {"Item_PortalKey", "Item_Immunity", "Item_Summon 3"}
-behaviorLib.LateItems  = {"Item_Intelligence7"}
+behaviorLib.LateItems  = {"Item_Intelligence7", "Item_GrimoireOfPower"}
 --item_summon is puzzlebox; Item_Intelligence7 is master staff
 
 object.ultTime = 0
