@@ -501,8 +501,6 @@ tinsert(behaviorLib.tBehaviors, behaviorLib.ManaBehavior)
 
 behaviorLib.runeToPick = nil
 function behaviorLib.PickRuneUtility(botBrain)
-	local utility = 0
-
 	local rune = runelib.GetNearestRune()
 	if rune == nil then
 		return 0
@@ -510,12 +508,14 @@ function behaviorLib.PickRuneUtility(botBrain)
 
 	behaviorLib.runeToPick = rune
 
+	local utility = 20
+
 	if rune.unit then
 		utility = utility + 10
 	end
 
 	if bottle.haveBottle() then
-		utility = utility + 30 - bottle.getCharges() * 5
+		utility = utility + 10 - bottle.getCharges() * 5
 	end
 
 	return utility - Vector3.Distance2DSq(rune.location, core.unitSelf:GetPosition())/(2000*2000)
