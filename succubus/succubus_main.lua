@@ -224,7 +224,6 @@ function object:oncombateventOverride(EventData)
 		end
 	end
 
-
 	if addBonus > 0 then
 		core.DecayBonus(self)
 		core.nHarassBonus = core.nHarassBonus + addBonus
@@ -371,6 +370,16 @@ local function HarassHeroExecuteOverride(botBrain)
 end
 object.harassExecuteOld = behaviorLib.HarassHeroBehavior["Execute"]
 behaviorLib.HarassHeroBehavior["Execute"] = HarassHeroExecuteOverride
+
+function behaviorLib.newDontBreakChannelExecute(botBrain)
+	for _,unit in pairs(core.tControllableUnits["AllUnits"]) do
+		local typeName = unit:GetTypeName()
+		if typeName ~= "Pet_GroundFamiliar" and typeName ~= "Pet_FlyngCourier" then
+			core.OrderAttack(botBrain, unit, unitTarget)
+		end
+	end
+end
+behaviorLib.DontBreakChannelBehavior["Execute"] = behaviorLib.newDontBreakChannelExecute
 
 ----------------------
 -- Healing behavior --
