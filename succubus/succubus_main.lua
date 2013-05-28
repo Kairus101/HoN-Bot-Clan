@@ -145,6 +145,15 @@ core.FindItems = funcFindItemsOverride
 function object:onthinkOverride(tGameVariables)
 	self:onthinkOld(tGameVariables)
 
+	local unitSelf = core.unitSelf
+
+	for _,unit in pairs(core.tControllableUnits["AllUnits"]) do
+		local typeName = unit:GetTypeName()
+		if typeName ~= "Pet_GroundFamiliar" and typeName ~= "Pet_FlyngCourier" then
+			core.OrderMoveToUnit(self, unit, unitSelf)
+		end
+	end
+
 	-- custom code here
 end
 object.onthinkOld = object.onthink
@@ -349,6 +358,13 @@ local function HarassHeroExecuteOverride(botBrain)
 		end
 	end
 	
+	for _,unit in pairs(core.tControllableUnits["AllUnits"]) do
+		local typeName = unit:GetTypeName()
+		if typeName ~= "Pet_GroundFamiliar" and typeName ~= "Pet_FlyngCourier" then
+			core.OrderAttack(botBrain, unit, unitTarget)
+		end
+	end
+
 	if not bActionTaken and not unitSelf:HasState("State_PowerupStealth") then
 		return object.harassExecuteOld(botBrain)
 	end 
@@ -470,7 +486,6 @@ behaviorLib.UseHealthRegenBehavior["Execute"] = behaviorLib.newUseHealthRegenExe
 --------------
 --   Mana   --
 --------------
-
 function behaviorLib.ManaUtility(botBrain)
 	if core.unitSelf:HasState("State_PowerupRegen") then
 		return 0
@@ -498,7 +513,6 @@ tinsert(behaviorLib.tBehaviors, behaviorLib.ManaBehavior)
 ---------------
 -- Pick Rune --
 ---------------
-
 behaviorLib.runeToPick = nil
 function behaviorLib.PickRuneUtility(botBrain)
 	local rune = runelib.GetNearestRune()
@@ -541,7 +555,6 @@ behaviorLib.PickRuneBehavior["Utility"] = behaviorLib.PickRuneUtility
 behaviorLib.PickRuneBehavior["Execute"] = behaviorLib.PickRuneExecute
 behaviorLib.PickRuneBehavior["Name"] = "Pick Rune"
 tinsert(behaviorLib.tBehaviors, behaviorLib.PickRuneBehavior)
-
 
 ----------------
 --    Misc    --
