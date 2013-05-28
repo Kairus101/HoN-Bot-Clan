@@ -372,10 +372,18 @@ object.harassExecuteOld = behaviorLib.HarassHeroBehavior["Execute"]
 behaviorLib.HarassHeroBehavior["Execute"] = HarassHeroExecuteOverride
 
 function behaviorLib.newDontBreakChannelExecute(botBrain)
-	for _,unit in pairs(core.tControllableUnits["AllUnits"]) do
-		local typeName = unit:GetTypeName()
-		if typeName ~= "Pet_GroundFamiliar" and typeName ~= "Pet_FlyngCourier" then
-			core.OrderAttack(botBrain, unit, unitTarget)
+	local unitTarget = nil
+	for _,hero in pairs(core.localUnits.EnemyHeroes) do
+		if hero:HasState("State_Succubis_Ability4") then
+			unitTarget = hero
+		end
+	end
+	if unitTarget then
+		for _,unit in pairs(core.tControllableUnits["AllUnits"]) do
+			local typeName = unit:GetTypeName()
+			if typeName ~= "Pet_GroundFamiliar" and typeName ~= "Pet_FlyngCourier" then
+				core.OrderAttack(botBrain, unit, core.localUnits.EnemyHeroes)
+			end
 		end
 	end
 end
