@@ -470,9 +470,9 @@ local function HarassHeroExecuteOverride(botBrain)
 		local abilWeedField = skills.abilWeedField
 		if abilWeedField:CanActivate() and nLastHarassUtility > object.nWeedFieldThreshold then
 			local nRange = abilWeedField:GetRange()
+			local vecTargetPredictPosition = vecTargetPosition + vecRelativeMov
 			if Vector3.Distance2DSq(vecMyPosition, vecTargetPredictPosition) < nRange * nRange then
 				local nCarpMovespeedSq = 600 * 600
-				local vecTargetPredictPosition = vecTargetPosition + vecRelativeMov
 				if not bTrackingCarp then
 					bActionTaken = core.OrderAbilityPosition(botBrain, skills.abilWeedField, vecTargetPredictPosition)
 					if bDebugEchoes then BotEcho("Casting weed field!") end
