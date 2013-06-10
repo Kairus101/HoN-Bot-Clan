@@ -146,11 +146,16 @@ function object:onthinkOverride(tGameVariables)
 	self:onthinkOld(tGameVariables)
 
 	local unitSelf = core.unitSelf
+	local mypos = unitSelf:GetPosition()
 
-	for _,unit in pairs(core.tControllableUnits["AllUnits"]) do
-		local typeName = unit:GetTypeName()
-		if typeName ~= "Pet_GroundFamiliar" and typeName ~= "Pet_FlyngCourier" then
-			core.OrderMoveToUnit(self, unit, unitSelf)
+	if core.tControllableUnits ~=nil then
+		for _,unit in pairs(core.tControllableUnits["AllUnits"]) do
+			local typeName = unit:GetTypeName()
+			if typeName ~= "Pet_GroundFamiliar" and typeName ~= "Pet_FlyngCourier" then
+				if Vector3.Distance2DSq(mypos, unit:GetPosition()) > 400*400 then
+					core.OrderMoveToPos(self, unit, mypos)
+				end
+			end
 		end
 	end
 
@@ -174,7 +179,7 @@ function behaviorLib.RetreatFromThreatExecuteOverride(botBrain)
 	local heartacheCanActivate = skills.heartache:CanActivate()
 	local bActionTaken = false
 
-	if core.NumberElements(eventsLib.incomingProjectiles.all) == 0 then
+	if core.NumberElements(eventsLib.incomingProjectiles["all"]) == 0 and lastRetreatUtil > 30 then
 		bottle.drink(botBrain)
 	end
 

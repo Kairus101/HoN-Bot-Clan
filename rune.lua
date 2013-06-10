@@ -29,10 +29,10 @@ teambot = HoN.GetTeamBotBrain()
 			teambot.nextCheck = 120000
 			teambot.checkInterval = 1000
 
-			--todo add types expect "gereatter" and "lesser" rune so bot can go for better rune if it have vision
+			--todo add types expect "greatter" and "lesser" rune so bot can go for better rune if it have vision
 			teambot.runes = {
-				{location = Vector3.Create(5824, 9728), unit=nil, picked = true},
-				{location = Vector3.Create(11136, 5376), unit=nil, picked = true}
+				{location = Vector3.Create(5824, 9728), unit=nil, picked = true, better=true},
+				{location = Vector3.Create(11136, 5376), unit=nil, picked = true, better=true}
 			}
 
 			function teambot:runeLibOnthinkOverride(tGameVariables)
@@ -45,6 +45,7 @@ teambot = HoN.GetTeamBotBrain()
 						--something spawned
 						rune.picked = false
 						rune.unit = nil
+						rune.better = true
 					end
 					runelib.checkRunes()
 				end
@@ -69,9 +70,13 @@ function runelib.checkRunes()
 			units = HoN.GetUnitsInRadius(rune.location, 50, RUNE_UNIT_MASK)
 			local runeFound = false
 			for _,unit in pairs(units) do
-				if table.contains(runeNames, unit:GetTypeName()) then
+				local typeName = unit:GetTypeName()
+				if table.contains(runeNames, typeName) then
 					runeFound = true
 					rune.unit = unit
+					if typeName == "Powerup_Refresh" then
+						rune.better = false
+					end
 					break
 				end
 			end
@@ -83,9 +88,10 @@ function runelib.checkRunes()
 	end
 end
 
-function runelib.GetNearestRune(pos, certain)
+function runelib.GetNearestRune(pos, certain, prioritizeBetter)
 	--we want to be sure there is rune
 	certain = certain or false
+	prioritizeBetter = prioritizeBetter or true
 
 	local mypos = core.unitSelf:GetPosition()
 
@@ -94,6 +100,9 @@ function runelib.GetNearestRune(pos, certain)
 	for _,rune in pairs(teambot.runes) do
 		if not certain or rune.unit ~= nil then
 			local distance = Vector3.Distance2DSq(rune.location, mypos)
+			if rune.better and prioritizeBetter then
+				distance = distance - 1000*1000
+			end
 			if not rune.picked and distance < shortestDistanceSQ then
 				nearestRune = rune
 				shortestDistanceSQ = distance
