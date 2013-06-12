@@ -10,35 +10,39 @@ local HeroInfo, AbilityInfo = classes.HeroInfo, classes.AbilityInfo;
 local hero = HeroInfo.Create('Hero_Aluna');
 hero.Threat = 1;
 
--- Emerald Lightning
-local abilEmeraldLightning = AbilityInfo.Create(0, 'Ability_Aluna1');
-abilEmeraldLightning.Threat = 2;
-abilEmeraldLightning.IsSingleTarget = true;
-abilEmeraldLightning.CanStun = true;
-abilEmeraldLightning.StunDuration = 1000; -- MS
-abilEmeraldLightning.CanInterrupt = true;
-abilEmeraldLightning.MagicDamage = { 100, 150, 200, 250 };
---abilEmeraldLightning.Buff = 'State_Aluna_Ability1_Self'; -- not relevant, threat is already calculated by DPS threat
-abilEmeraldLightning.Debuff = 'State_Aluna_Ability1_Enemy';
-hero:AddAbility(abilEmeraldLightning);
+do -- Emerald Lightning
+	local abil = AbilityInfo.Create(0, 'Ability_Aluna1');
+	abil.Threat = 2;
+	abil.IsSingleTarget = true;
+	abil.CanStun = true;
+	abil.StunDuration = 1000; -- MS
+	abil.CanInterrupt = true;
+	abil.MagicDamage = { 100, 150, 200, 250 };
+	--abil.Buff = 'State_Aluna_Ability1_Self'; -- not relevant, threat is already calculated by DPS threat
+	abil.Debuff = 'State_Aluna_Ability1_Enemy';
+	hero:AddAbility(abil);
+end
 
--- Power Throw
-local abilPowerThrow = AbilityInfo.Create(1, 'Ability_Aluna2');
-abilPowerThrow.Threat = 1;
-abilPowerThrow.MagicDamage = { 140, 210, 280, 350 };
-hero:AddAbility(abilPowerThrow);
+do -- Power Throw
+	local abil = AbilityInfo.Create(1, 'Ability_Aluna2');
+	abil.Threat = 1;
+	abil.MagicDamage = { 140, 210, 280, 350 };
+	hero:AddAbility(abil);
+end
 
--- Deja Vu
-local abilDejaVu = AbilityInfo.Create(2, 'Ability_Aluna3');
-abilDejaVu.Threat = 1; -- The threat for this ability is automatically calculated by the DPS threat
-abilDejaVu.Buff = 'State_Aluna_Ability3';
-hero:AddAbility(abilDejaVu);
+do -- Deja Vu
+	local abil = AbilityInfo.Create(2, 'Ability_Aluna3');
+	abil.Threat = 1; -- The threat for this ability is automatically calculated by the DPS threat
+	abil.Buff = 'State_Aluna_Ability3';
+	hero:AddAbility(abil);
+end
 
--- Emerald Red
-local abilEmeraldRed = AbilityInfo.Create(3, 'Ability_Aluna4');
-abilEmeraldRed.Threat = 1;
-abilEmeraldRed.Buff = 'State_Aluna_Ability4';
-hero:AddAbility(abilEmeraldRed);
+do -- Emerald Red
+	local abil = AbilityInfo.Create(3, 'Ability_Aluna4');
+	abil.Threat = 1;
+	abil.Buff = 'State_Aluna_Ability4';
+	hero:AddAbility(abil);
+end
 
 -- Because runfile doesn't return the return value of an executed file, we have to use this workaround:
 _G.HoNBots = _G.HoNBots or {};

@@ -6,45 +6,49 @@ require('/bots/Classes/AbilityInfo.class.lua');
 local classes = _G.HoNBots.Classes;
 local HeroInfo, AbilityInfo = classes.HeroInfo, classes.AbilityInfo;
 
--- Keeper of the Forest
+-- Keeper of the Forest (8)
 local hero = HeroInfo.Create('Hero_Treant');
 hero.Threat = 2;
 
--- Nature's Veil
-local abilNaturesVeil = AbilityInfo.Create(0, 'Ability_Treant1');
-abilNaturesVeil.Threat = 0;
-abilNaturesVeil.IsSingleTarget = true;
-abilNaturesVeil.CanInvisSelf = true;
-abilNaturesVeil.CanInvisOther = true;
-abilNaturesVeil.Buff = 'State_Treant_Ability1';
-hero:AddAbility(abilNaturesVeil);
+do -- Nature's Veil
+	local abil = AbilityInfo.Create(0, 'Ability_Treant1');
+	abil.Threat = 0;
+	abil.IsSingleTarget = true;
+	abil.CanInvisSelf = true;
+	abil.CanInvisOther = true;
+	abil.Buff = 'State_Treant_Ability1';
+	hero:AddAbility(abil);
+end
 
--- Animate Forest
-local abilAnimateForest = AbilityInfo.Create(1, 'Ability_Treant2');
-abilAnimateForest.Threat = 0; -- Threat from this is automatically calculated by the CreepAggroUtility
-abilAnimateForest.IsSingleTarget = true;
-hero:AddAbility(abilAnimateForest);
+do -- Animate Forest
+	local abil = AbilityInfo.Create(1, 'Ability_Treant2');
+	abil.Threat = 0; -- Threat from this is automatically calculated by the CreepAggroUtility
+	abil.IsSingleTarget = true;
+	hero:AddAbility(abil);
+end
 
--- Entmoot
-local abilEntmoot = AbilityInfo.Create(2, 'Ability_Treant3');
-abilEntmoot.Threat = 0;
-abilEntmoot.Buff = 'State_Treant_Ability3';
-hero:AddAbility(abilEntmoot);
+do -- Entmoot
+	local abil = AbilityInfo.Create(2, 'Ability_Treant3');
+	abil.Threat = 0; -- Threat from this is automatically calculated by the DPS threat
+	abil.Buff = 'State_Treant_Ability3';
+	hero:AddAbility(abil);
+end
 
--- Root
-local abilRoot = AbilityInfo.Create(3, 'Ability_Treant4');
-abilRoot.Threat = 6; -- Bonus threat! Keeper ult is one of the strongest ingame. Be careful!
-abilRoot.CanInterrupt = true;
-abilRoot.CanInterruptMagicImmune = true;
-abilRoot.CanRoot = true;
-abilRoot.CanReveal = true;
-abilRoot.CanDisarm = true;
-abilRoot.ShouldSpread = true;
-abilRoot.ShouldBreakFree = true;
-abilRoot.MagicDPS = 100;
-abilRoot.Debuff = 'State_Treant_Ability4';
-abilRoot.DebuffDuration = { 2000, 3000, 4000 };
-hero:AddAbility(abilRoot);
+do -- Root
+	local abil = AbilityInfo.Create(3, 'Ability_Treant4');
+	abil.Threat = 6; -- Bonus threat! Keeper ult is one of the strongest ingame. Be careful!
+	abil.CanInterrupt = true;
+	abil.CanInterruptMagicImmune = true;
+	abil.CanRoot = true;
+	abil.CanReveal = true;
+	abil.CanDisarm = true;
+	abil.ShouldSpread = true;
+	abil.ShouldBreakFree = true;
+	abil.MagicDPS = 100;
+	abil.Debuff = 'State_Treant_Ability4';
+	abil.DebuffDuration = { 2000, 3000, 4000 };
+	hero:AddAbility(abil);
+end
 
 -- Because runfile doesn't return the return value of an executed file, we have to use this workaround:
 _G.HoNBots = _G.HoNBots or {};
