@@ -37,6 +37,7 @@ class.StunDuration = 0; -- MS
 class.ShouldSpread = false;
 class.ShouldInterrupt = false;
 class.ShouldBreakFree = false;
+class.ShouldPort = false;
 
 -- A negative value is considered a percentage.
 -- Can also provide a function to calculate the damage (first parameter passed must be ability level, second must be the unit affected)
