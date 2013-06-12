@@ -23,7 +23,6 @@ class.__TypeName = nil;
 class.IsSingleTarget = false;
 
 class.CanStun = false;
-class.StunDuration = 0; -- MS
 class.CanInterrupt = false;
 class.CanInterruptMagicImmune = false;
 class.CanSlow = false;
@@ -32,6 +31,8 @@ class.CanDisarm = false;
 class.CanInvisSelf = false;
 class.CanInvisOther = false;
 class.CanReveal = false;
+
+class.StunDuration = 0; -- MS
 
 class.ShouldSpread = false;
 class.ShouldInterrupt = false;
@@ -49,6 +50,12 @@ class.BuffDuration = 0;
 class.Debuff = nil; -- e.g. abil.Debuff = 'State_Andromeda_Ability2'
 class.DebuffDuration = 0;
 
+--[[ function class.Create(nSlot, sTypeName)
+description:		Create a new instance of the AbilityInfo class.
+parameters:			nSlot				(Number) The slot number for the ability.
+					sTypeName			(String) The type name for the ability.
+returns:			(AbilityInfo) A new instance of the AbilityInfo class.
+]]
 function class.Create(nSlot, sTypeName)
 	local instance = {};
 	setmetatable(instance, class);
@@ -59,12 +66,27 @@ function class.Create(nSlot, sTypeName)
 	return instance;
 end
 
+--[[ function class:GetTypeName()
+description:		Returns the type name for this ability.
+returns:			(String) The type name for this ability.
+]]
 function class:GetTypeName()
 	return self.__TypeName;
 end
+--[[ function class:GetSlot()
+description:		Returns the slot for this ability.
+returns:			(Number) The slot for this ability.
+]]
 function class:GetSlot()
 	return self.__Slot;
 end
+--[[ function class:GetValue(val, nAbilityLevel)
+description:		Get the value fitting the ability level.
+parameters:			val					(object) The value of any of the properties of this class.
+					nAbilityLevel		(Number) The ability level to return data for.
+returns:			(object) A single value indicating the value for the ability of this level.
+example:			abilInfo:GetValue(abilInfo.CanStun, abil:GetLevel())
+]]
 function class:GetValue(val, nAbilityLevel)
 	if type(val) == 'table' then
 		return val[nAbilityLevel - 1];
