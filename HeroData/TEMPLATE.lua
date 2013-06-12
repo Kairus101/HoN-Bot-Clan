@@ -63,6 +63,13 @@ Available properties:
 -- Whether the ability is a single target ability or an AoE. 
 abil.IsSingleTarget = false;
 
+-- Whether the ability can only be cast on self. Things like Scout's Vanish or Accursed's ult count as such.
+class.CanCastOnSelf = false;
+-- Whether the ability can be used on friendly heroes.
+class.CanCastOnFriendlies = false;
+-- Whether the ability can be used on hostile heroes. Should not be used for auras such as Accursed's Sear.
+class.CanCastOnHostiles = false;
+
 -- Whether the ability can stun.
 abil.CanStun = false;
 -- Whether the ability can interrupt anyone.

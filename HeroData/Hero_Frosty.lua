@@ -13,6 +13,7 @@ hero.Threat = 0;
 do -- Tundra Blast
 	local abil = AbilityInfo.Create(0, 'Ability_Frosty1');
 	abil.Threat = 1;
+	abil.CanCastOnHostiles = true;
 	abil.CanSlow = true;
 	abil.MagicDamage = { 80, 130, 180, 230 };
 	abil.Debuff = 'State_Frosty_Ability1';
@@ -23,6 +24,9 @@ end
 do -- Ice Imprisonment
 	local abil = AbilityInfo.Create(1, 'Ability_Frosty2');
 	abil.Threat = 2;
+	abil.CanCastOnSelf = true;
+	abil.CanCastOnFriendlies = true;
+	abil.CanCastOnHostiles = true;
 	abil.IsSingleTarget = true;
 	-- This isn't a real stun! It's an immobilize that disarms.
 	abil.CanInterrupt = true;
@@ -46,6 +50,7 @@ end
 do -- Glacial Downpour
 	local abil = AbilityInfo.Create(3, 'Ability_Frosty4');
 	abil.Threat = 2;
+	abil.CanCastOnHostiles = true;
 	abil.CanSlow = true;
 	abil.ShouldInterrupt = true;
 	abil.MagicDPS = { 55, 95, 135 }; -- assume one hit per second

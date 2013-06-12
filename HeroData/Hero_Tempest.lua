@@ -14,6 +14,7 @@ do -- Glacial Blasts
 	local abil = AbilityInfo.Create(0, 'Ability_Tempest1');
 	abil.Threat = 3; -- Pretty strong stun
 	abil.IsSingleTarget = true;
+	abil.CanCastOnHostiles = true;
 	abil.CanStun = true;
 	abil.CanInterrupt = true;
 	abil.StunDuration = 1000; -- 1 second stun (1000ms) every 2 seconds for 1/2/2/3 times
@@ -34,6 +35,7 @@ end
 do -- Meteor
 	local abil = AbilityInfo.Create(2, 'Ability_Tempest3');
 	abil.Threat = 1; -- Lots of damage!
+	abil.CanCastOnHostiles = true;
 	abil.MagicDPS = { -0.03, -0.04, -0.05, -0.06 }; -- negative values are considered percentages
 	abil.Debuff = 'State_Tempest_Ability3_Tooltip';
 	abil.DebuffDuration = 8000;
@@ -43,6 +45,7 @@ end
 do -- Elemental Void
 	local abil = AbilityInfo.Create(3, 'Ability_Tempest4');
 	abil.Threat = 6; -- Bonus threat! Tempest ult is one of the strongest ingame. Be careful!
+	abil.CanCastOnHostiles = true;
 	abil.CanStun = true;
 	abil.StunDuration = 4000;
 	abil.CanInterrupt = true;

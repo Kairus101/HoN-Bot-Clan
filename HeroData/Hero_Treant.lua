@@ -14,6 +14,8 @@ do -- Nature's Veil
 	local abil = AbilityInfo.Create(0, 'Ability_Treant1');
 	abil.Threat = 0;
 	abil.IsSingleTarget = true;
+	abil.CanCastOnSelf = true;
+	abil.CanCastOnFriendlies = true;
 	abil.CanInvisSelf = true;
 	abil.CanInvisOther = true;
 	abil.Buff = 'State_Treant_Ability1';
@@ -37,6 +39,7 @@ end
 do -- Root
 	local abil = AbilityInfo.Create(3, 'Ability_Treant4');
 	abil.Threat = 6; -- Bonus threat! Keeper ult is one of the strongest ingame. Be careful!
+	abil.CanCastOnHostiles = true;
 	abil.CanInterrupt = true;
 	abil.CanInterruptMagicImmune = true;
 	abil.CanRoot = true;

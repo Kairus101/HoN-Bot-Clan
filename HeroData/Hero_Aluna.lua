@@ -6,7 +6,7 @@ require('/bots/Classes/AbilityInfo.class.lua');
 local classes = _G.HoNBots.Classes;
 local HeroInfo, AbilityInfo = classes.HeroInfo, classes.AbilityInfo;
 
--- Aluna
+-- Aluna (5)
 local hero = HeroInfo.Create('Hero_Aluna');
 hero.Threat = 1;
 
@@ -14,6 +14,7 @@ do -- Emerald Lightning
 	local abil = AbilityInfo.Create(0, 'Ability_Aluna1');
 	abil.Threat = 2;
 	abil.IsSingleTarget = true;
+	abil.CanCastOnHostiles = true;
 	abil.CanStun = true;
 	abil.StunDuration = 1000; -- MS
 	abil.CanInterrupt = true;
@@ -26,21 +27,26 @@ end
 do -- Power Throw
 	local abil = AbilityInfo.Create(1, 'Ability_Aluna2');
 	abil.Threat = 1;
+	abil.CanCastOnHostiles = true;
 	abil.MagicDamage = { 140, 210, 280, 350 };
 	hero:AddAbility(abil);
 end
 
 do -- Deja Vu
 	local abil = AbilityInfo.Create(2, 'Ability_Aluna3');
-	abil.Threat = 1; -- The threat for this ability is automatically calculated by the DPS threat
+	abil.Threat = 0;
+	abil.CanCastOnSelf = true;
 	abil.Buff = 'State_Aluna_Ability3';
+	abil.BuffDuration = { 3000, 3500, 4000, 4500 };
 	hero:AddAbility(abil);
 end
 
 do -- Emerald Red
 	local abil = AbilityInfo.Create(3, 'Ability_Aluna4');
 	abil.Threat = 1;
+	abil.CanCastOnSelf = true;
 	abil.Buff = 'State_Aluna_Ability4';
+	abil.BuffDuration = 10000;
 	hero:AddAbility(abil);
 end
 

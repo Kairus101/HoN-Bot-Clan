@@ -19,8 +19,15 @@ class.__Slot = nil;
 class.__TypeName = nil;
 
 -- Public properties
--- These properties may also be tables containing different values per level, e.g. abil.CanStun = { false,false,false,true }
+-- These properties may also be tables containing different values per level, e.g. abil.CanStun = { false, false, false, true }
 class.IsSingleTarget = false;
+
+-- Whether the ability can only be cast on self. Things like Scout's Vanish or Accursed's ult count as such.
+class.CanCastOnSelf = false;
+-- Whether the ability can be used on friendly heroes.
+class.CanCastOnFriendlies = false;
+-- Whether the ability can be used on hostile heroes. Should not be used for auras such as Accursed's Sear.
+class.CanCastOnHostiles = false;
 
 class.CanStun = false;
 class.CanInterrupt = false;

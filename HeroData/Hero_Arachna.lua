@@ -6,7 +6,7 @@ require('/bots/Classes/AbilityInfo.class.lua');
 local classes = _G.HoNBots.Classes;
 local HeroInfo, AbilityInfo = classes.HeroInfo, classes.AbilityInfo;
 
--- Arachna
+-- Arachna (7)
 local hero = HeroInfo.Create('Hero_Arachna');
 hero.Threat = 2;
 
@@ -14,6 +14,7 @@ do -- Webbed Shot
 	local abil = AbilityInfo.Create(0, 'Ability_Arachna1');
 	abil.Threat = 2;
 	abil.IsSingleTarget = true;
+	abil.CanCastOnHostiles = true;
 	abil.CanSlow = true;
 	abil.MagicDPS = { 4, 8, 12, 16 };
 	abil.Debuff = 'State_Arachna_Ability1';
@@ -23,6 +24,7 @@ end
 do -- Harden Carapace
 	local abil = AbilityInfo.Create(1, 'Ability_Arachna2');
 	abil.Threat = 0;
+	abil.CanCastOnSelf = true;
 	hero:AddAbility(abil);
 end
 
@@ -35,7 +37,9 @@ end
 
 do -- Spider Sting
 	local abil = AbilityInfo.Create(3, 'Ability_Arachna4');
-	abil.Threat = 2;
+	abil.Threat = 3;
+	abil.IsSingleTarget = true;
+	abil.CanCastOnHostiles = true;
 	abil.ShouldPort = true;
 	abil.PhysicalDPS = { 75, 150, 225 }; -- total damage / 5 seconds
 	abil.Debuff = 'State_Arachna_Ability4';
