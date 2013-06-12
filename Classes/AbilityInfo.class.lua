@@ -35,8 +35,7 @@ class.CanInterruptMagicImmune = false;
 class.CanSlow = false;
 class.CanRoot = false;
 class.CanDisarm = false;
-class.CanInvisSelf = false;
-class.CanInvisOther = false;
+class.CanTurnInvisible = false;
 class.CanReveal = false;
 
 class.StunDuration = 0; -- MS

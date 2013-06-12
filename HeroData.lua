@@ -66,7 +66,7 @@ function mod:HasInvis(nTeamId)
 	for k, unit in pairs(HoN.GetHeroes(nTeamId)) do
 		local hero = self:GetHeroData(unit:GetTypeName());
 		
-		if hero and (hero:Has('InvisSelf') or hero:Has('InvisOther')) then
+		if hero and hero:Has('TurnInvisible') then
 			return true;
 		end
 	end

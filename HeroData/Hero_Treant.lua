@@ -16,8 +16,7 @@ do -- Nature's Veil
 	abil.IsSingleTarget = true;
 	abil.CanCastOnSelf = true;
 	abil.CanCastOnFriendlies = true;
-	abil.CanInvisSelf = true;
-	abil.CanInvisOther = true;
+	abil.CanTurnInvisible = true;
 	abil.Buff = 'State_Treant_Ability1';
 	hero:AddAbility(abil);
 end

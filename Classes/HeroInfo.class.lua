@@ -67,7 +67,7 @@ end
 --[[ function class:Has(sAction)
 description:		Check if this Hero has an ability that can do the provided action.
 parameters:			sAction				(String) The action an ability need to be able to do.
-										May be Stun, Interrupt, InterruptMagicImmune, Slow, Root, Disarm, InvisSelf, InvisOther or Reveal.
+										May be Stun, Interrupt, InterruptMagicImmune, Slow, Root, Disarm, CanTurnInvisible, InvisOther or Reveal.
 returns:			(Boolean) True if one or more of the abilities can do this action.
 example:			hero:Has('Stun')
 ]]

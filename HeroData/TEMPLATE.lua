@@ -82,10 +82,8 @@ abil.CanSlow = false;
 abil.CanRoot = false;
 -- Whether the ability can disarm.
 abil.CanDisarm = false;
--- Whether the ability can make the hero himself invisible (such as Scout, Grinex, Fayde, etc.).
-abil.CanInvisSelf = false;
--- Whether the ability can make someone else invisible (such as Revenant, Keeper of the Forest, etc.).
-abil.CanInvisOther = false;
+-- Whether the ability can make a hero invisible.
+abil.CanTurnInvisible = false;
 -- Whether the ability would reveal invisible targets.
 abil.CanReveal = false;
 
