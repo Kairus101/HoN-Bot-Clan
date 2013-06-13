@@ -14,6 +14,7 @@ do -- First Ability Name
 	local abil = AbilityInfo.Create(0, 'Ability_TYPENAME1');
 	abil.Threat = 2;
 	abil.IsSingleTarget = true;
+	abil.CanCastOnHostiles = true;
 	abil.CanSlow = true;
 	abil.MagicDPS = { 4, 8, 12, 16 };
 	abil.Debuff = 'State_Arachna_Ability1';
@@ -23,6 +24,8 @@ end
 do -- Second Ability Name
 	local abil = AbilityInfo.Create(1, 'Ability_TYPENAME2');
 	abil.Threat = 0;
+	abil.CanCastOnSelf = true;
+	abil.CanCastOnFriendlies = true;
 	hero:AddAbility(abil);
 end
 
@@ -36,6 +39,7 @@ end
 do -- Ultimate Name
 	local abil = AbilityInfo.Create(3, 'Ability_TYPENAME4');
 	abil.Threat = 2;
+	abil.CanCastOnHostiles = true;
 	abil.ShouldPort = true;
 	abil.PhysicalDPS = { 75, 150, 225 }; -- total damage / 5 seconds
 	abil.Debuff = 'State_Arachna_Ability4';
