@@ -50,6 +50,7 @@ parameters:			abil				(AbilityData) The ability to add.
 ]]
 function class:AddAbility(abil)
 	self.Abilities[abil:GetSlot()] = abil;
+	abil:SetHeroInfo(self);
 	--self.Abilities[abil:GetTypeName()] = abil;
 end
 --[[ function class:GetAbility(nSlot)

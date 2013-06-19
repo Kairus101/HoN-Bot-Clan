@@ -45,6 +45,7 @@ do -- Eruption
 	local abil = AbilityInfo.Create(3, 'Ability_Magmar4');
 	abil.Threat = 3;
 	abil.CanCastOnHostiles = true; -- while in reality this is cast on self, it damages heroes around self which counts as an AoE
+	abil.ChannelingState = 'State_Magmar_Ability4_SelfCast'; -- this is applied to Magmus while he is channeling - it's not a visible buff though
 	abil.CanSlow = true;
 	abil.ShouldSpread = true;
 	abil.ShouldInterrupt = true;
