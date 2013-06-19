@@ -17,6 +17,7 @@ class.__index = class;
 -- Private
 class.__Slot = nil;
 class.__TypeName = nil;
+class.__HeroInfo = nil;
 
 -- Public properties
 -- These properties may also be tables containing different values per level, e.g. abil.CanStun = { false, false, false, true }
@@ -29,21 +30,28 @@ class.CanCastOnFriendlies = false;
 -- Whether the ability can be used on hostile heroes. Should not be used for auras such as Accursed's Sear.
 class.CanCastOnHostiles = false;
 
+-- The state that is applied if the hero is channeling this ability. Only required for abilities that need to be channeled.
+class.ChannelingState = nil;
+
 class.CanStun = false;
 class.CanInterrupt = false;
-class.CanInterruptMagicImmune = false;
+class.CanInterruptMagicImmune = false; -- e.g. Panda's abilities that go through shrunken head
 class.CanSlow = false;
 class.CanRoot = false;
 class.CanDisarm = false;
-class.CanTurnInvisible = false;
-class.CanReveal = false;
+class.CanTurnInvisible = false; -- e.g. Scout Vanish or Keeper Nature's Veil
+class.CanReveal = false; -- e.g. Tempest ult, Scout's Eyes, Pestilence ult
+class.CanDispositionSelf = false; -- e.g. Andro swap, Magebane Blink, Chronos Time Leap, Pharaoh ult, Doctor ult - i.e. anything moving your own hero
+class.CanDispositionFriendlies = false; -- e.g. Andro swap, devo hook
+class.CanDispositionHostiles = false; -- e.g. Andro swap, devo hook, prisoner ball and chain
 
 class.StunDuration = 0; -- MS
 
-class.ShouldSpread = false;
-class.ShouldInterrupt = false;
-class.ShouldBreakFree = false;
-class.ShouldPort = false;
+class.ShouldSpread = false; -- for abilities like Elemental Void (Tempest's ult)
+class.ShouldInterrupt = false; -- for abilities like Elemental Void (Tempest's ult)
+class.ShouldBreakFree = false; -- for abilities like Root (Keeper of the Forest's ult)
+class.ShouldPort = false; -- for abilities like Hemorrhage (Blood Hunter's ult)
+class.ShouldAvoidDamage = false; -- for abilities like Cursed Ground (Voodoo Jester's E)
 
 -- A negative value is considered a percentage.
 -- Can also provide a function to calculate the damage (first parameter passed must be ability level, second must be the unit affected)
@@ -100,4 +108,18 @@ function class:GetValue(val, nAbilityLevel)
 	end
 	
 	return val;
+end
+
+function class:SetHeroInfo(heroInfo)
+	self.__HeroInfo = heroInfo;
+end
+function class:GetHeroInfo(heroInfo)
+	return self.__HeroInfo;
+end
+function class:IsFrom(unit)
+	if unit:GetTypeName() == self.__HeroInfo:GetTypeName() then
+		return true;
+	end
+	
+	return false;
 end

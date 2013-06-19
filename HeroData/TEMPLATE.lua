@@ -65,43 +65,54 @@ return hero;
 Available properties:
 ]]
 -- Whether the ability is a single target ability or an AoE. 
-abil.IsSingleTarget = false;
+abil.IsSingleTarget = true;
 
 -- Whether the ability can only be cast on self. Things like Scout's Vanish or Accursed's ult count as such.
-class.CanCastOnSelf = false;
+abil.CanCastOnSelf = true;
 -- Whether the ability can be used on friendly heroes.
-class.CanCastOnFriendlies = false;
+abil.CanCastOnFriendlies = true;
 -- Whether the ability can be used on hostile heroes. Should not be used for auras such as Accursed's Sear.
-class.CanCastOnHostiles = false;
+abil.CanCastOnHostiles = true;
+
+-- The state that is applied to the hero that is channeling this ability. Only required for abilities that need to be channeled. Not all abilities have a state applied to the hero channeling the ability.
+abil.ChannelingState = 'State_Hero_Ability_SelfCast';
 
 -- Whether the ability can stun.
-abil.CanStun = false;
+abil.CanStun = true;
 -- Whether the ability can interrupt anyone.
-abil.CanInterrupt = false;
+abil.CanInterrupt = true;
 -- Wether the ability can interrupt someone that is magic immune (physical interrupt).
-abil.CanInterruptMagicImmune = false;
+abil.CanInterruptMagicImmune = true;
 -- Whether the ability can slow.
-abil.CanSlow = false;
+abil.CanSlow = true;
 -- Whether the ability can root.
-abil.CanRoot = false;
+abil.CanRoot = true;
 -- Whether the ability can disarm.
-abil.CanDisarm = false;
+abil.CanDisarm = true;
 -- Whether the ability can make a hero invisible.
-abil.CanTurnInvisible = false;
+abil.CanTurnInvisible = true;
 -- Whether the ability would reveal invisible targets.
-abil.CanReveal = false;
+abil.CanReveal = true;
+-- Whether the ability can change the position of your own hero. e.g. Andro swap, Magebane Blink, Chronos Time Leap, Pharaoh ult, DR ult
+abil.CanDispositionSelf = true;
+-- Whether the ability can change the position of a friendly hero. e.g. Andro swap, devo hook
+abil.CanDispositionFriendlies = true;
+-- Whether the ability can change the position of a hostile hero. e.g. Andro swap, devo hook, prisoner ball and chain
+abil.CanDispositionHostiles = true;
 
 -- The duration of a stun.
-abil.StunDuration = 0; -- MS
+abil.StunDuration = 1000; -- MS
 
--- Whether the bot may want to spread (e.g. Ult from Tempest). This is completely suggestive and may be ignored.
-abil.ShouldSpread = false;
--- Whether the bot may want to try to interrupt this ability (e.g. Ult from Tempest). This is completely suggestive and may be ignored.
-abil.ShouldInterrupt = false;
--- Whether the bot may want to break free from an ability (e.g. Root from Keeper). This is completely suggestive and may be ignored.
-abil.ShouldBreakFree = false;
--- Whether the bot may want to port out (e.g. Ult from Arachna or Blood Hunter). This is completely suggestive and may be ignored.
-abil.ShouldPort = false;
+-- Whether the bot may want to spread (e.g. Ult from Tempest).
+abil.ShouldSpread = true;
+-- Whether the bot may want to try to interrupt this ability (e.g. Ult from Tempest).
+abil.ShouldInterrupt = true;
+-- Whether the bot may want to break free from an ability (e.g. Root from Keeper).
+abil.ShouldBreakFree = true;
+-- Whether the bot may want to port out (e.g. Ult from Arachna or Blood Hunter).
+abil.ShouldPort = true;
+-- Whether the bot should avoid damage (e.g. Cursed Ground).
+abil.ShouldAvoidDamage = true;
 
 -- A negative value is considered a percentage.
 -- Can also provide a function to calculate the damage (first parameter passed must be ability level, second must be the unit affected)
@@ -115,11 +126,11 @@ abil.PhysicalDamage = 0;
 abil.PhysicalDPS = 0;
 
 -- What buff the caster gains.
-abil.Buff = nil; -- e.g. abil.Buff = 'State_Aluna_Ability4'
+abil.Buff = 'State_Name_Here_Buff'; -- e.g. abil.Buff = 'State_Aluna_Ability4'
 -- For how long the caster gains this buff.
-abil.BuffDuration = 0;
+abil.BuffDuration = 2000;
 -- What debuff the target gets.
-abil.Debuff = nil; -- e.g. abil.Debuff = 'State_Andromeda_Ability2'
+abil.Debuff = 'State_Name_Here_Debuff'; -- e.g. abil.Debuff = 'State_Andromeda_Ability2'
 -- The duration of said debuff.
-abil.DebuffDuration = 0;
+abil.DebuffDuration = 2000;
 
