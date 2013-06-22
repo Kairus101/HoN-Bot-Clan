@@ -18,6 +18,7 @@ do -- Webbed Shot
 	abil.CanSlow = true;
 	abil.MagicDPS = { 4, 8, 12, 16 };
 	abil.Debuff = 'State_Arachna_Ability1';
+	abil.DebuffDuration = 3000;
 	hero:AddAbility(abil);
 end
 
