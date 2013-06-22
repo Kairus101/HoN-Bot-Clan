@@ -70,6 +70,10 @@ Available properties:
 -- Passive (also for "Toggle Aura" abilities like SR's Withering Presence), Self (also for "Self Position" abilities like Keeper's Root), AutoCast, TargetUnit, TargetPosition, VectorEntity
 abil.TargetType = 'UNKNOWN';
 
+-- If the TargetType is VectorEntity this should specify what kind of target is optimal (e.g. for Grinex this would be a table: { 'Hero', 'Cliff', 'Tree', 'Building' }, for Rally this is 'Hero').
+-- Possible values: Hero, Cliff, Tree, Building or a combination of them
+class.VectorEntityTarget = nil;
+
 -- Whether the ability can only be cast on self. Things like Scout's Vanish or Accursed's ult count as such.
 abil.CanCastOnSelf = true;
 -- Whether the ability can be used on friendly heroes.
