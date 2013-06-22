@@ -6,14 +6,14 @@ require('/bots/Libraries/LibHeroData/Classes/AbilityInfo.class.lua');
 local classes = _G.HoNBots.Classes;
 local HeroInfo, AbilityInfo = classes.HeroInfo, classes.AbilityInfo;
 
--- HERO NAME
+-- HERONAME
 local hero = HeroInfo.Create('Hero_TYPENAME');
 hero.Threat = 2;
 
-do -- First Ability Name
+do -- FirstAbilityName
 	local abil = AbilityInfo.Create(0, 'Ability_TYPENAME1');
 	abil.Threat = 2;
-	abil.TargetType = 'UNKNOWN'; -- Passive (only for abilities that can NOT be toggled! e.g. Glacius' Chilling Presence), Self, AutoCast, TargetUnit, TargetPosition, VectorEntity
+	abil.TargetType = 'UNKNOWN'; -- Passive (only for abilities that can NOT be toggled! e.g. Glacius' Chilling Presence), Self (also for abilities that can be toggled, such as Arachna's Aura), AutoCast, TargetUnit, TargetPosition, VectorEntity
 	abil.CanCastOnHostiles = true;
 	abil.CanSlow = true;
 	abil.MagicDPS = { 4, 8, 12, 16 };
@@ -21,27 +21,27 @@ do -- First Ability Name
 	hero:AddAbility(abil);
 end
 
-do -- Second Ability Name
+do -- SecondAbilityName
 	local abil = AbilityInfo.Create(1, 'Ability_TYPENAME2');
 	abil.Threat = 0;
-	abil.TargetType = 'UNKNOWN'; -- Passive (only for abilities that can NOT be toggled! e.g. Glacius' Chilling Presence), Self, AutoCast, TargetUnit, TargetPosition, VectorEntity
+	abil.TargetType = 'UNKNOWN'; -- Passive (only for abilities that can NOT be toggled! e.g. Glacius' Chilling Presence), Self (also for abilities that can be toggled, such as Arachna's Aura), AutoCast, TargetUnit, TargetPosition, VectorEntity
 	abil.CanCastOnSelf = true;
 	abil.CanCastOnFriendlies = true;
 	hero:AddAbility(abil);
 end
 
-do -- Third Ability Name
+do -- ThirdAbilityName
 	local abil = AbilityInfo.Create(2, 'Ability_TYPENAME3');
 	abil.Threat = 0; -- The threat for this ability is automatically calculated by the DPS threat
-	abil.TargetType = 'UNKNOWN'; -- Passive (only for abilities that can NOT be toggled! e.g. Glacius' Chilling Presence), Self, AutoCast, TargetUnit, TargetPosition, VectorEntity
+	abil.TargetType = 'UNKNOWN'; -- Passive (only for abilities that can NOT be toggled! e.g. Glacius' Chilling Presence), Self (also for abilities that can be toggled, such as Arachna's Aura), AutoCast, TargetUnit, TargetPosition, VectorEntity
 	abil.Buff = 'State_Arachna_Ability3';
 	hero:AddAbility(abil);
 end
 
-do -- Ultimate Name
+do -- UltimateName
 	local abil = AbilityInfo.Create(3, 'Ability_TYPENAME4');
 	abil.Threat = 2;
-	abil.TargetType = 'UNKNOWN'; -- Passive (only for abilities that can NOT be toggled! e.g. Glacius' Chilling Presence), Self, AutoCast, TargetUnit, TargetPosition, VectorEntity
+	abil.TargetType = 'UNKNOWN'; -- Passive (only for abilities that can NOT be toggled! e.g. Glacius' Chilling Presence), Self (also for abilities that can be toggled, such as Arachna's Aura), AutoCast, TargetUnit, TargetPosition, VectorEntity
 	abil.CanCastOnHostiles = true;
 	abil.ShouldPort = true;
 	abil.PhysicalDPS = { 75, 150, 225 }; -- total damage / 5 seconds
@@ -128,6 +128,7 @@ abil.PhysicalDamage = 0;
 -- The amount of physical damage PER SECOND this does.
 abil.PhysicalDPS = 0;
 
+-- Buff/Debuff properties do NOT hold buffs per level, but instead all possible buffs. Some alts have different state names that do the exact same.
 -- What buff the caster gains.
 abil.Buff = 'State_Name_Here_Buff'; -- e.g. abil.Buff = 'State_Aluna_Ability4'
 -- For how long the caster gains this buff.
