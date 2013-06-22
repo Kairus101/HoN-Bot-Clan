@@ -21,7 +21,7 @@ do -- Compel
 	abil.CanInterrupt = true;
 	abil.CanDispositionSelf = true;
 	abil.CanDispositionFriendlies = true;
-	abil.StunDuration = { 1.25, 1.5, 1.75, 2 };
+	abil.StunDuration = { 1250, 1500, 1750, 2000 };
 	abil.PhysicalDamage = { 70, 130, 190, 250 };
 	hero:AddAbility(abil);
 end
