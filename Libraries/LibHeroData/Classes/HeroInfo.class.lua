@@ -16,9 +16,9 @@ class.__index = class;
 
 -- Private
 class.__TypeName = nil;
+class.__Abilities = nil;
 
 -- Public properties
-class.Abilities = nil;
 class.Threat = 0;
 
 --[[ function class.Create(sTypeName)
@@ -31,7 +31,7 @@ function class.Create(sTypeName)
 	setmetatable(instance, class);
 	
 	instance.__TypeName = sTypeName;
-	instance.Abilities = {};
+	instance.__Abilities = {};
 	
 	return instance;
 end
@@ -49,9 +49,9 @@ description:		Add an ability to this hero.
 parameters:			abil				(AbilityData) The ability to add.
 ]]
 function class:AddAbility(abil)
-	self.Abilities[abil:GetSlot()] = abil;
+	self.__Abilities[abil:GetSlot()] = abil;
 	abil:SetHeroInfo(self);
-	--self.Abilities[abil:GetTypeName()] = abil;
+	--self.__Abilities[abil:GetTypeName()] = abil;
 end
 --[[ function class:GetAbility(nSlot)
 description:		Get the ability for the provided slot.
@@ -59,10 +59,10 @@ parameters:			nSlot				(Number) The slot of the ability.
 returns:			(AbilityData) An instance of the AbilityData if it exists, nil if not.
 ]]
 function class:GetAbility(nSlot)
-	return self.Abilities[nSlot];
+	return self.__Abilities[nSlot];
 end
 --function class:GetAbility2(sTypeName)
---	return self.Abilities[sTypeName];
+--	return self.__Abilities[sTypeName];
 --end
 
 --[[ function class:Has(sAction)

@@ -1,7 +1,7 @@
 local _G = getfenv(0)
 
-require('/bots/Classes/HeroInfo.class.lua');
-require('/bots/Classes/AbilityInfo.class.lua');
+require('/bots/Libraries/LibHeroData/Classes/HeroInfo.class.lua');
+require('/bots/Libraries/LibHeroData/Classes/AbilityInfo.class.lua');
 
 local classes = _G.HoNBots.Classes;
 local HeroInfo, AbilityInfo = classes.HeroInfo, classes.AbilityInfo;
@@ -13,7 +13,7 @@ hero.Threat = 0;
 do -- Glacial Blasts
 	local abil = AbilityInfo.Create(0, 'Ability_Tempest1');
 	abil.Threat = 3; -- Pretty strong stun
-	abil.IsSingleTarget = true;
+	abil.TargetType = 'TargetUnit';
 	abil.CanCastOnHostiles = true;
 	abil.CanStun = true;
 	abil.CanInterrupt = true;
@@ -28,13 +28,14 @@ end
 do -- Elemental
 	local abil = AbilityInfo.Create(1, 'Ability_Tempest2');
 	abil.Threat = 0; -- Threat from this is automatically calculated by the CreepAggroUtility
-	abil.IsSingleTarget = true;
+	abil.TargetType = 'TargetUnit';
 	hero:AddAbility(abil);
 end
 
 do -- Meteor
 	local abil = AbilityInfo.Create(2, 'Ability_Tempest3');
 	abil.Threat = 1; -- Lots of damage!
+	abil.TargetType = 'TargetPosition';
 	abil.CanCastOnHostiles = true;
 	abil.MagicDPS = { -0.03, -0.04, -0.05, -0.06 }; -- negative values are considered percentages
 	abil.Debuff = 'State_Tempest_Ability3_Tooltip';
@@ -45,6 +46,7 @@ end
 do -- Elemental Void
 	local abil = AbilityInfo.Create(3, 'Ability_Tempest4');
 	abil.Threat = 6; -- Bonus threat! Tempest ult is one of the strongest ingame. Be careful!
+	abil.TargetType = 'TargetPosition';
 	abil.CanCastOnHostiles = true;
 	abil.CanStun = true;
 	abil.StunDuration = 4000;
@@ -59,8 +61,8 @@ end
 
 -- Because runfile doesn't return the return value of an executed file, we have to use this workaround:
 _G.HoNBots = _G.HoNBots or {};
-_G.HoNBots.HeroData = _G.HoNBots.HeroData or {};
-_G.HoNBots.HeroData[hero:GetTypeName()] = hero;
+_G.HoNBots.LibHeroData = _G.HoNBots.LibHeroData or {};
+_G.HoNBots.LibHeroData[hero:GetTypeName()] = hero;
 
 -- It would be prettier if we could just get the return value from runfile;
 return hero;

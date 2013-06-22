@@ -20,8 +20,8 @@ class.__TypeName = nil;
 class.__HeroInfo = nil;
 
 -- Public properties
--- These properties may also be tables containing different values per level, e.g. abil.CanStun = { false, false, false, true }
-class.IsSingleTarget = false;
+-- Most of these properties may also be tables containing different values per level, e.g. abil.CanStun = { false, false, false, true }
+class.TargetType = 'UNKNOWN'; -- Passive (only for abilities that can NOT be toggled! e.g. Glacius' Chilling Presence), Self, AutoCast, TargetUnit, TargetPosition, VectorEntity
 
 -- Whether the ability can only be cast on self. Things like Scout's Vanish or Accursed's ult count as such.
 class.CanCastOnSelf = false;
@@ -113,7 +113,7 @@ end
 function class:SetHeroInfo(heroInfo)
 	self.__HeroInfo = heroInfo;
 end
-function class:GetHeroInfo(heroInfo)
+function class:GetHeroInfo()
 	return self.__HeroInfo;
 end
 function class:IsFrom(unit)
