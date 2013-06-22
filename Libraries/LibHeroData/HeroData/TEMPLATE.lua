@@ -71,7 +71,7 @@ Available properties:
 abil.TargetType = 'UNKNOWN';
 
 -- If the TargetType is VectorEntity this should specify what kind of target is optimal (e.g. for Grinex this would be a table: { 'Hero', 'Cliff', 'Tree', 'Building' }, for Rally this is 'Hero').
--- Possible values: Hero, Cliff, Tree, Building or a combination of them
+-- Possible values: Hero, Cliff, Tree, Building or a combination of them. This does NOT hold different values per levels if a table is provided, but instead holds all possible targets.
 class.VectorEntityTarget = nil;
 
 -- Whether the ability can only be cast on self. Things like Scout's Vanish or Accursed's ult count as such.
