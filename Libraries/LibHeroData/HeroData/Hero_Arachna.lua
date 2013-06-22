@@ -33,7 +33,7 @@ end
 do -- Precision
 	local abil = AbilityInfo.Create(2, 'Ability_Arachna3');
 	abil.Threat = 0; -- The threat for this ability is automatically calculated by the DPS threat
-	abil.TargetType = 'Self';
+	abil.TargetType = 'Passive';
 	abil.Buff = 'State_Arachna_Ability3';
 	hero:AddAbility(abil);
 end

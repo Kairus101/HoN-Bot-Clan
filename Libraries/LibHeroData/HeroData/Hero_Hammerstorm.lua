@@ -26,7 +26,7 @@ end
 do -- Mighty Swing
 	local abil = AbilityInfo.Create(1, 'Ability_Hammerstorm2');
 	abil.Threat = 0;
-	abil.TargetType = 'Self';
+	abil.TargetType = 'Passive';
 	hero:AddAbility(abil);
 end
 

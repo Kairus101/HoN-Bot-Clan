@@ -38,7 +38,7 @@ end
 do -- Volcanic Touch
 	local abil = AbilityInfo.Create(2, 'Ability_Magmar3');
 	abil.Threat = 0;
-	abil.TargetType = 'Self';
+	abil.TargetType = 'Passive';
 	abil.MagicDamage = { 90, 130, 170, 210 };
 	hero:AddAbility(abil);
 end

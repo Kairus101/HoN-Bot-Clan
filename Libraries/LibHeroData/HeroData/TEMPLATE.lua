@@ -13,7 +13,7 @@ hero.Threat = 2;
 do -- FirstAbilityName
 	local abil = AbilityInfo.Create(0, 'Ability_TYPENAME1');
 	abil.Threat = 2;
-	abil.TargetType = 'UNKNOWN'; -- Passive (only for abilities that can NOT be toggled! e.g. Glacius' Chilling Presence), Self (also for abilities that can be toggled, such as Arachna's Aura), AutoCast, TargetUnit, TargetPosition, VectorEntity
+	abil.TargetType = 'UNKNOWN'; -- Passive, Self, AutoCast, TargetUnit, TargetPosition, VectorEntity
 	abil.CanCastOnHostiles = true;
 	abil.CanSlow = true;
 	abil.MagicDPS = { 4, 8, 12, 16 };
@@ -24,7 +24,7 @@ end
 do -- SecondAbilityName
 	local abil = AbilityInfo.Create(1, 'Ability_TYPENAME2');
 	abil.Threat = 0;
-	abil.TargetType = 'UNKNOWN'; -- Passive (only for abilities that can NOT be toggled! e.g. Glacius' Chilling Presence), Self (also for abilities that can be toggled, such as Arachna's Aura), AutoCast, TargetUnit, TargetPosition, VectorEntity
+	abil.TargetType = 'UNKNOWN'; -- Passive, Self, AutoCast, TargetUnit, TargetPosition, VectorEntity
 	abil.CanCastOnSelf = true;
 	abil.CanCastOnFriendlies = true;
 	hero:AddAbility(abil);
@@ -33,7 +33,7 @@ end
 do -- ThirdAbilityName
 	local abil = AbilityInfo.Create(2, 'Ability_TYPENAME3');
 	abil.Threat = 0; -- The threat for this ability is automatically calculated by the DPS threat
-	abil.TargetType = 'UNKNOWN'; -- Passive (only for abilities that can NOT be toggled! e.g. Glacius' Chilling Presence), Self (also for abilities that can be toggled, such as Arachna's Aura), AutoCast, TargetUnit, TargetPosition, VectorEntity
+	abil.TargetType = 'UNKNOWN'; -- Passive, Self, AutoCast, TargetUnit, TargetPosition, VectorEntity
 	abil.Buff = 'State_Arachna_Ability3';
 	hero:AddAbility(abil);
 end
@@ -41,7 +41,7 @@ end
 do -- UltimateName
 	local abil = AbilityInfo.Create(3, 'Ability_TYPENAME4');
 	abil.Threat = 2;
-	abil.TargetType = 'UNKNOWN'; -- Passive (only for abilities that can NOT be toggled! e.g. Glacius' Chilling Presence), Self (also for abilities that can be toggled, such as Arachna's Aura), AutoCast, TargetUnit, TargetPosition, VectorEntity
+	abil.TargetType = 'UNKNOWN'; -- Passive, Self, AutoCast, TargetUnit, TargetPosition, VectorEntity
 	abil.CanCastOnHostiles = true;
 	abil.ShouldPort = true;
 	abil.PhysicalDPS = { 75, 150, 225 }; -- total damage / 5 seconds
@@ -67,7 +67,7 @@ return hero;
 --[[
 Available properties:
 ]]
--- Passive (only for abilities that can NOT be toggled! e.g. Glacius' Chilling Presence), Self (also for "Toggle" abilities and "Self Position"), AutoCast, TargetUnit, TargetPosition, VectorEntity
+-- Passive (also for "Toggle Aura" abilities like SR's Withering Presence), Self (also for "Self Position" abilities like Keeper's Root), AutoCast, TargetUnit, TargetPosition, VectorEntity
 abil.TargetType = 'UNKNOWN';
 
 -- Whether the ability can only be cast on self. Things like Scout's Vanish or Accursed's ult count as such.
