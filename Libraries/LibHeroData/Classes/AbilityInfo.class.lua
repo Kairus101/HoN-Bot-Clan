@@ -23,6 +23,9 @@ class.__HeroInfo = nil;
 -- Most of these properties may also be tables containing different values per level, e.g. abil.CanStun = { false, false, false, true }
 class.TargetType = 'UNKNOWN'; -- Passive (only for abilities that can NOT be toggled! e.g. Glacius' Chilling Presence), Self, AutoCast, TargetUnit, TargetPosition, VectorEntity
 
+-- If the TargetType is VectorEntity this should specify what kind of target is optimal (e.g. for Grinex this would be a table: { 'Hero', 'Cliff', 'Tree', 'Building' }, for Rally this is 'Hero').
+class.VectorEntityTarget = nil;
+
 -- Whether the ability can only be cast on self. Things like Scout's Vanish or Accursed's ult count as such.
 class.CanCastOnSelf = false;
 -- Whether the ability can be used on friendly heroes.
