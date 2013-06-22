@@ -18,8 +18,6 @@ do -- Acid Cocktail
 	abil.CanStun = true;
 	abil.CanInterrupt = true;
 	abil.StunDuration = 1500;
-	abil.Debuff = 'State_Stunned';
-	abil.DebuffDuration = 1500;
 	hero:AddAbility(abil);
 end
 

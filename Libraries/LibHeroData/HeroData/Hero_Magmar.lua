@@ -18,8 +18,6 @@ do -- Lava Surge
 	abil.CanStun = true;
 	abil.StunDuration = 1650;
 	abil.MagicDamage = { 100, 160, 220, 280 };
-	abil.Debuff = 'State_Stunned';
-	abil.DebuffDuration = 1650;
 	hero:AddAbility(abil);
 end
 

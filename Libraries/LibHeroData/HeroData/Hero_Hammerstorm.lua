@@ -18,8 +18,6 @@ do -- Hammer Throw
 	abil.CanStun = true;
 	abil.StunDuration = 2000;
 	abil.MagicDamage = { 100, 175, 250, 325 };
-	abil.Debuff = 'State_Stunned';
-	abil.DebuffDuration = 2000;
 	hero:AddAbility(abil);
 end
 
