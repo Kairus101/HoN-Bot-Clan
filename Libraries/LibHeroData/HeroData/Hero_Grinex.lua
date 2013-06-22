@@ -18,6 +18,8 @@ do -- Shadow Step
 	abil.CanCastOnHostiles = true;
 	abil.CanStun = true;
 	abil.CanInterrupt = true;
+	--abil.CanDispositionSelf = true; -- will this is in fact true, don't set it to true since it holds no valuable info (we can't use it as a teleport)
+	abil.CanDispositionHostiles = true;
 	abil.StunDuration = { 1000, 1200, 1400, 1600 };
 	abil.MagicDamage = { 50, 80, 110, 140 };
 	hero:AddAbility(abil);
