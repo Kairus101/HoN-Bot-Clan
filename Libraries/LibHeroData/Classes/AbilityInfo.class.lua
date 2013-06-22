@@ -21,7 +21,8 @@ class.__HeroInfo = nil;
 
 -- Public properties
 -- Most of these properties may also be tables containing different values per level, e.g. abil.CanStun = { false, false, false, true }
-class.TargetType = 'UNKNOWN'; -- Passive (only for abilities that can NOT be toggled! e.g. Glacius' Chilling Presence), Self, AutoCast, TargetUnit, TargetPosition, VectorEntity
+
+class.TargetType = 'UNKNOWN'; -- Passive, Self, AutoCast, TargetUnit, TargetPosition, TargetVector, VectorEntity
 
 -- If the TargetType is VectorEntity this should specify what kind of target is optimal (e.g. for Grinex this would be a table: { 'Hero', 'Cliff', 'Tree', 'Building' }, for Rally this is 'Hero').
 class.VectorEntityTarget = nil;
