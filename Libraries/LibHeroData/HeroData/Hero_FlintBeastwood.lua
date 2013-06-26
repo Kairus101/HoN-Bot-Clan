@@ -14,6 +14,7 @@ do -- Explosive Flare
 	local abil = AbilityInfo.Create(0, 'Ability_FlintBeastwood1');
 	abil.Threat = 1.5;
 	abil.TargetType = 'TargetPosition';
+	abil.CastEffectType = 'Magic';
 	abil.CanCastOnHostiles = true;
 	abil.CanSlow = true;
 	abil.MagicDamage = { 25, 50, 75, 100 };
@@ -47,6 +48,7 @@ do -- Money Shot
 	local abil = AbilityInfo.Create(3, 'Ability_FlintBeastwood4');
 	abil.Threat = 1.5;
 	abil.TargetType = 'TargetUnit';
+	abil.CastEffectType = 'SuperiorMagic';
 	abil.CanCastOnHostiles = true;
 	abil.CanStun = true;
 	abil.CanInterrupt = true;
