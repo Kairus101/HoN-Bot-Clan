@@ -113,6 +113,7 @@ abil.StunDuration = 1000; -- MS
 -- Whether the bot may want to spread (e.g. Ult from Tempest).
 abil.ShouldSpread = true;
 -- Whether the bot may want to try to interrupt this ability (e.g. Ult from Tempest).
+-- If you need to think about this for longer then a second then this should generally be true.
 abil.ShouldInterrupt = true;
 -- Whether the bot may want to break free from an ability (e.g. Root from Keeper).
 abil.ShouldBreakFree = true;
@@ -120,6 +121,8 @@ abil.ShouldBreakFree = true;
 abil.ShouldPort = true;
 -- Whether the bot should avoid damage (e.g. Cursed Ground).
 abil.ShouldAvoidDamage = true;
+-- Whether the bot should remove a target's null stone effect with this ability (e.g. Armadon's Snot (Q) or Deadwood's Uproot (W)).
+abil.ShouldRemoveNullStone = true;
 
 -- A negative value is considered a percentage.
 -- Can also provide a function to calculate the damage (first parameter passed must be ability level, second must be the unit affected)
