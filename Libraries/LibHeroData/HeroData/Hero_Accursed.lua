@@ -14,6 +14,7 @@ do -- Cauterize
 	local abil = AbilityInfo.Create(0, 'Ability_Accursed1');
 	abil.Threat = 2;
 	abil.TargetType = 'TargetUnit';
+	abil.CastEffectType = 'Magic';
 	abil.CanCastOnFriendlies = true;
 	abil.CanCastOnHostiles = true;
 	abil.IsDefensive = true;
@@ -25,6 +26,7 @@ do -- Fire Shield
 	local abil = AbilityInfo.Create(1, 'Ability_Accursed2');
 	abil.Threat = 2;
 	abil.TargetType = 'TargetUnit';
+	abil.CastEffectType = 'Magic';
 	abil.CanCastOnSelf = true;
 	abil.CanCastOnFriendlies = true;
 	abil.MagicDamage = { 110, 140, 170, 200 }; --TODO: should we really consider this?
@@ -45,6 +47,7 @@ do -- Flame Consumption
 	local abil = AbilityInfo.Create(3, 'Ability_Accursed4');
 	abil.Threat = 0;
 	abil.TargetType = 'Self';
+	abil.CastEffectType = 'Physical';
 	abil.CanCastOnSelf = true;
 	abil.Buff = 'State_Accursed_Ability4';
 	hero:AddAbility(abil);
