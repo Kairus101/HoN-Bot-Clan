@@ -14,6 +14,7 @@ do -- Webbed Shot
 	local abil = AbilityInfo.Create(0, 'Ability_Arachna1');
 	abil.Threat = 2;
 	abil.TargetType = 'AutoCast';
+	abil.CastEffectType = 'Magic';
 	abil.CanCastOnHostiles = true;
 	abil.CanSlow = true;
 	abil.MagicDPS = { 4, 8, 12, 16 };
@@ -42,6 +43,7 @@ do -- Spider Sting
 	local abil = AbilityInfo.Create(3, 'Ability_Arachna4');
 	abil.Threat = 3;
 	abil.TargetType = 'TargetUnit';
+	abil.CastEffectType = 'Physical';
 	abil.CanCastOnHostiles = true;
 	abil.ShouldPort = true;
 	abil.PhysicalDPS = { 75, 150, 225 }; -- total damage / 5 seconds
