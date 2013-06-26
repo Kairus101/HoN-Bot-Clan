@@ -31,6 +31,7 @@ class.TargetType = ''; -- Passive, Self, AutoCast, TargetUnit, TargetPosition, T
 
 -- The below value isn't really required: it should be filled if the casteffecttype in the ability.entity file for the abiltiy has been filled. If not then you can skip setting this property. (it's not listed as an optional property since it doesn't share those traits)
 -- You can also provide a table with multiple values, e.g. Tundra's Piercing Shards which is both superior magic and superior physical would be { 'SuperiorMagic', 'SuperiorPhysical' }.
+-- You should ignore any cast effect types not listed below (e.g. Push, Attack, Transfigure, etc.). If none of the below types are found then you can remove the entire property.
 class.CastEffectType = ''; -- Magic, Physical, SuperiorMagic, SuperiorPhysical 
 
 -----------------------------------------------------------------------------------------------------------------------------------------
