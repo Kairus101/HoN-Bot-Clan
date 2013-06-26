@@ -14,6 +14,7 @@ do -- Shadow Step
 	local abil = AbilityInfo.Create(0, 'Ability_Grinex1');
 	abil.Threat = 2;
 	abil.TargetType = 'VectorEntity';
+	abil.CastEffectType = 'Magic';
 	abil.VectorEntityTarget = { 'Hero', 'Cliff', 'Tree', 'Building' };
 	abil.CanCastOnHostiles = true;
 	abil.CanStun = true;
