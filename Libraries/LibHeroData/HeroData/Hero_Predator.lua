@@ -14,6 +14,7 @@ do -- Venomous Leap
 	local abil = AbilityInfo.Create(0, 'Ability_Predator1');
 	abil.Threat = 2;
 	abil.TargetType = 'TargetUnit';
+	abil.CastEffectType = 'Physical';
 	abil.CanCastOnHostiles = true;
 	abil.CanSlow = true;
 	abil.MagicDamage = { 75, 125, 175, 225 };

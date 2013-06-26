@@ -14,6 +14,7 @@ do -- Compel
 	local abil = AbilityInfo.Create(0, 'Ability_Rally1');
 	abil.Threat = 2;
 	abil.TargetType = 'VectorEntity'; -- not_rooted_willing_ally_heroes
+	abil.CastEffectType = 'Magic';
 	-- Cast on self/friendlies, hurts hostiles
 	abil.CanCastOnSelf = true;
 	abil.CanCastOnFriendlies = true;
@@ -49,6 +50,7 @@ do -- Seismic Slam
 	local abil = AbilityInfo.Create(3, 'Ability_Rally4');
 	abil.Threat = 4; -- pretty damaging - we should stay out of range of this one
 	abil.TargetType = 'TargetPosition';
+	abil.CastEffectType = 'Physical';
 	abil.CanCastOnHostiles = true;
 	abil.PhysicalDamage = { 400, 650, 900 };
 	hero:AddAbility(abil);

@@ -14,6 +14,7 @@ do -- Gust
 	local abil = AbilityInfo.Create(0, 'Ability_Zephyr1');
 	abil.Threat = 2;
 	abil.TargetType = 'TargetVector';
+	abil.CastEffectType = 'Magic';
 	abil.CanCastOnHostiles = true;
 	abil.CanStun = true;
 	abil.CanInterrupt = true;
@@ -42,6 +43,7 @@ do -- Typhoon
 	local abil = AbilityInfo.Create(3, 'Ability_Zephyr4');
 	abil.Threat = 2;
 	abil.TargetType = 'TargetPosition';
+	abil.CastEffectType = 'SuperiorMagic';
 	abil.CanCastOnHostiles = true;
 	abil.CanSlow = true;
 	abil.ShouldSpread = true;

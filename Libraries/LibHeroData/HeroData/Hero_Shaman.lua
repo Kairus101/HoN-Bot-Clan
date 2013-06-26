@@ -14,6 +14,7 @@ do -- Entangle
 	local abil = AbilityInfo.Create(0, 'Ability_Shaman1');
 	abil.Threat = 1.5;
 	abil.TargetType = 'TargetUnit';
+	abil.CastEffectType = 'Magic';
 	abil.CanCastOnHostiles = true;
 	abil.CanStun = { false, false, true, true };
 	abil.CanInterrupt = { false, false, true, true };
@@ -41,6 +42,7 @@ do -- Healing Wave
 	local abil = AbilityInfo.Create(2, 'Ability_Shaman3');
 	abil.Threat = 1.5;
 	abil.TargetType = 'TargetUnit';
+	abil.CastEffectType = 'Physical';
 	abil.CanCastOnSelf = true;
 	abil.CanCastOnFriendlies = true;
 	abil.PhysicalDamage = { 160, 200, 240, 280 }; -- assume 2 hits
@@ -51,6 +53,7 @@ do -- Storm Cloud
 	local abil = AbilityInfo.Create(3, 'Ability_Shaman4');
 	abil.Threat = 2;
 	abil.TargetType = 'TargetPosition';
+	abil.CastEffectType = 'Magic';
 	abil.CanCastOnSelf = true;
 	abil.CanCastOnFriendlies = true;
 	abil.CanCastOnHostiles = true;

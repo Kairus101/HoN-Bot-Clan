@@ -14,6 +14,7 @@ do -- Hammer Throw
 	local abil = AbilityInfo.Create(0, 'Ability_Hammerstorm1');
 	abil.Threat = 2;
 	abil.TargetType = 'TargetUnit';
+	abil.CastEffectType = 'Magic';
 	abil.CanCastOnHostiles = true;
 	abil.CanStun = true;
 	abil.StunDuration = 2000;
@@ -43,6 +44,7 @@ do -- Brute Strength
 	local abil = AbilityInfo.Create(3, 'Ability_Hammerstorm4');
 	abil.Threat = 2; -- The threat for this ability is automatically calculated by the DPS threat
 	abil.TargetType = 'Self';
+	abil.CastEffectType = 'Magic';
 	abil.CanCastOnSelf = true;
 	abil.Debuff = 'State_Hammerstorm_Ability4';
 	abil.DebuffDuration = 25000;
