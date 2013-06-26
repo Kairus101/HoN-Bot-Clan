@@ -101,7 +101,7 @@ function jungleLib.assess(botBrain)
 					if addedDifficulty then jungleLib.jungleSpots[i].creepDifficulty=jungleLib.jungleSpots[i].creepDifficulty+creepDifficulty end
 				end
 			end
-			--local localNeutrals = core.NumberElements(core.localUnits["neutrals"]) --to not confuse with minions
+			
 			if jungleLib.jungleSpots[i].stacks~=0 and nUnitsNearCamp==0 then --we can see the camp, nothing is there.
 				if (debug) then BotEcho("Camp "..jungleLib.jungleSpots[i].description.." is empty. Are they all dead? "..jungleLib.jungleSpots[i].stacks) end
 				if secs>37 then jungleLib.jungleSpots[i].corpseBlocking=true end --perhaps add to this. This is a corpse check.

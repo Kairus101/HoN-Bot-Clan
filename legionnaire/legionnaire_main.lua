@@ -1,3 +1,4 @@
+--NOTE: Uncomment blocks at 66 and 148 when advanced shopping is approved.
 ----------------------------------------------
 --  _                     ______       _    --
 -- | |                    | ___ \     | |   --
@@ -12,7 +13,7 @@
 ----------------------------------------------
 --                Created by:               --
 ----------------------------------------------
---           kairus101 - Jungling           --
+--kairus101 - Jungling, TeamBot intergration--
 --    DarkFire - Code Cleanup & Abilities   --
 --    NoseNuggets - Bot Base Code & Ideas   --
 ----------------------------------------------
@@ -62,10 +63,11 @@ runfile "bots/eventsLib.lua"
 runfile "bots/metadata.lua"
 runfile "bots/behaviorLib.lua"
 
+--[[
 runfile "bots/advancedShopping.lua"
 local shopping = object.shoppingHandler
-----shopping.Setup(bReserveItems, bSkipLaneWaiting, bCourierCare, bBuyConsumables, tConsumableOptions)
-shopping.Setup(true, true, false, true)
+shopping.Setup({bReserveItems=true, bWaitForLaneDecision=true, tConsumableOptions=false, bCourierCare=false})
+]]
 
 runfile "bots/jungleLib.lua"
 local jungleLib = object.jungleLib
@@ -137,10 +139,62 @@ object.nPortalKeyThreshold = 20
 
 behaviorLib.nCreepPushbackMul = 0.3
 behaviorLib.nTargetPositioningMul = 0.8
-
 behaviorLib.safeTreeAngle = 360
-
 object.nLastTauntTime = 0
+
+------------------------------
+--  Dynamic Item building   --
+------------------------------
+--[[
+local function legoItemBuilder()
+		local debugInfo = false
+		if debugInfo then BotEcho("Checking Itembuilder of Lego") end
+		local bNewItems = false
+	   
+		--get itembuild decision table
+		local tItemDecisions = shopping.ItemDecisions
+		if debugInfo then BotEcho("Found ItemDecisions"..type(tItemDecisions)) end
+	   
+		--Choose Lane Items
+		if not tItemDecisions.Lane then		
+	   
+				if debugInfo then BotEcho("Choose Startitems") end
+			   
+				local tLane = core.tMyLane
+				if tLane then
+						if debugInfo then BotEcho("Found my Lane") end
+						local startItems = nil
+						if tLane.sLaneName == "jungle" then
+								if debugInfo then BotEcho("I will take to the jungle.") end
+								startItems = {"2 Item_IronBuckler", "Item_RunesOfTheBlight"}
+						else
+								if debugInfo then BotEcho("Argh, I am not mid *sob*") end
+								startItems = {"Item_LoggersHatchet", "Item_IronBuckler", "Item_RunesOfTheBlight"}
+						end
+						core.InsertToTable(shopping.Itembuild, startItems)			 
+						bNewItems = true
+						tItemDecisions.Lane = true
+				else
+						--still no lane.... no starting items
+						if debugInfo then BotEcho("No Lane set. Bot will skip start items now") end
+				end
+		--rest of itembuild
+		elseif not tItemDecisions.Rest then
+				if debugInfo then BotEcho("Insert Rest of Items") end
+				core.InsertToTable(shopping.Itembuild, behaviorLib.LaneItems)
+				core.InsertToTable(shopping.Itembuild, behaviorLib.MidItems)
+				core.InsertToTable(shopping.Itembuild, behaviorLib.LateItems)
+			   
+				bNewItems = true
+				tItemDecisions.Rest = true
+		end
+	   
+		if debugInfo then BotEcho("Reached end of Itembuilder Function. Keep Shopping? "..tostring(bNewItems)) end
+		return bNewItems
+end
+object.oldItembuilder = shopping.CheckItemBuild
+shopping.CheckItemBuild = legoItemBuilder
+]]
 
 ------------------------------
 --          Skills          --
@@ -227,10 +281,13 @@ core.FindItems = funcFindItemsOverride
 ----------------------------------------
 --          OnThink Override          --
 ----------------------------------------
-
+object.bLoadedLanes=false 
 function object:onthinkOverride(tGameVariables)
 	self:onthinkOld(tGameVariables)
-	
+    if (not object.bLoadedLanes) then
+        core.teamBotBrain:SetLanePreferences( {Jungle = 5, Mid = 1, ShortSolo = 1, LongSolo = 1, ShortSupport = 1, LongSupport = 1, ShortCarry = 3, LongCarry = 2, hero=core.unitSelf} )
+        object.bLoadedLanes=true
+    end
 	jungleLib.assess(self)
 end
 
@@ -523,7 +580,7 @@ jungleLib.currentMaxDifficulty = 70
 
 -------- Behavior Functions --------
 function jungleUtility(botBrain)
-	if HoN.GetRemainingPreMatchTime() and HoN.GetRemainingPreMatchTime()>40000 then
+	if (HoN.GetRemainingPreMatchTime() and HoN.GetRemainingPreMatchTime()>14000) or core.tMyLane.sLaneName~='jungle' then -- don't try if we have a lane!
 		return 0
 	end
 	-- Wait until level 9 to start grouping/pushing/defending
@@ -548,7 +605,7 @@ function jungleExecute(botBrain)
 	end
 
 	if debugMode then core.DrawDebugArrow(vecMyPos, vecTargetPos, 'green') end
-
+	
 	local nTargetDistanceSq = Vector3.Distance2DSq(vecMyPos, vecTargetPos)
 	if nTargetDistanceSq > (600 * 600) or jungleLib.nStacking ~= 0 then
 		-- Move to the next camp
@@ -571,6 +628,7 @@ function jungleExecute(botBrain)
 				return core.OrderAttackPosition(botBrain, unitSelf, vecTargetPos,false,false)
 			elseif jungleLib.nStacking ~= 0 and nTargetDistanceSq < (1500 * 1500) and nSecs > 50 then
 				-- Move away from the units in the camp
+				jungleLib.stacking = jungleLib.nStackingCamp
 				jungleLib.nStacking = 2
 				local vecAwayPos = jungleLib.jungleSpots[jungleLib.nStackingCamp].pos + (jungleLib.jungleSpots[jungleLib.nStackingCamp].outsidePos - jungleLib.jungleSpots[jungleLib.nStackingCamp].pos) * 5
 				if debugMode then
@@ -583,6 +641,7 @@ function jungleExecute(botBrain)
 			else
 				-- Finished stacking
 				jungleLib.nStacking = 0
+				jungleLib.stacking=0
 				return core.OrderMoveToPosAndHoldClamp(botBrain, unitSelf, vecTargetPos)
 			end
 		else
@@ -625,12 +684,33 @@ tinsert(behaviorLib.tBehaviors, behaviorLib.jungleBehavior)
 ----------------------------------------
 --          Behavior Changes          --
 ----------------------------------------
-function zeroUtility(botBrain)
+
+--Position self, but only if not in jungle.
+local function PositionSelfUtilityOverride(botBrain)
+	if (core.tMyLane and core.tMyLane.sLaneName~='jungle') then
+		return object.oldPositionSelfUtility(botBrain)
+	end
 	return 0
 end
+object.oldPositionSelfUtility = behaviorLib.PositionSelfBehavior["Utility"]
+behaviorLib.PositionSelfBehavior["Utility"] = PositionSelfUtilityOverride
 
-behaviorLib.PositionSelfBehavior["Utility"] = zeroUtility
-behaviorLib.PreGameBehavior["Utility"] = zeroUtility
+--Pre-game, but, we don't head to lanes, we head to jungle.
+local function PreGameUtilityOverride(botBrain)
+	if (not (core.tMyLane and core.tMyLane.sLaneName=='jungle')) then
+		return object.oldPreGameUtility(botBrain)
+	end
+	return 0
+end
+object.oldPreGameUtility = behaviorLib.PreGameBehavior["Utility"]
+behaviorLib.PreGameBehavior["Utility"] = PreGameUtilityOverride
+
+--Return to well, based on more factors than just health.
+function HealAtWellUtilityOverride(botBrain)
+    return object.HealAtWellUtilityOld(botBrain)*1.75+(botBrain:GetGold()*8/2000)+ 8-(core.unitSelf:GetManaPercent()*8)
+end
+object.HealAtWellUtilityOld = behaviorLib.HealAtWellBehavior["Utility"]
+behaviorLib.HealAtWellBehavior["Utility"] = HealAtWellUtilityOverride
 
 -----------------------------------
 --          Custom Chat          --
