@@ -24,8 +24,12 @@ class.__HeroInfo = nil;
 -- Required properties: these should be set in every ability instance.
 -----------------------------------------------------------------------------------------------------------------------------------------
 
+-- The threat of the ability. Only one value allowed. Only applied when the ability is off cooldown. For passive abilities add threat to the hero. Keep in mind that any abilities that increase the visual DPS of the hero will automatically increase threat too.
+class.Threat = 0;
 -- The targeting type of the ability. Only one value allowed. May be used to automatically determine how an ability should be cast.
 class.TargetType = ''; -- Passive, Self, AutoCast, TargetUnit, TargetPosition, TargetVector, VectorEntity
+
+-- The below value isn't really required: it should be filled if the casteffecttype in the ability.entity file for the abiltiy has been filled. If not then you can skip setting this property. (it's not listed as an optional property since it doesn't share those traits)
 -- You can also provide a table with multiple values, e.g. Tundra's Piercing Shards which is both superior magic and superior physical would be { 'SuperiorMagic', 'SuperiorPhysical' }.
 class.CastEffectType = ''; -- Magic, Physical, SuperiorMagic, SuperiorPhysical 
 
