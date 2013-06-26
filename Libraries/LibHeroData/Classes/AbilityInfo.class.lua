@@ -8,21 +8,31 @@ _G.HoNBots.Classes = _G.HoNBots.Classes or {};
 local classes = _G.HoNBots.Classes;
 
 -- Make class table
-classes.AbilityInfo = {};
+classes.AbilityInfo = classes.AbilityInfo or {};
 
--- Easy reference
-local class = classes.AbilityInfo;
+local class = classes.AbilityInfo; -- An easy to remember and general reference
 class.__index = class;
 
--- Private
+-----------------------------------------------------------------------------------------------------------------------------------------
+-- Private fields
+-----------------------------------------------------------------------------------------------------------------------------------------
 class.__Slot = nil;
 class.__TypeName = nil;
 class.__HeroInfo = nil;
 
--- Public properties
--- Most of these properties may also be tables containing different values per level, e.g. abil.CanStun = { false, false, false, true }
+-----------------------------------------------------------------------------------------------------------------------------------------
+-- Required properties: these should be set in every ability instance.
+-----------------------------------------------------------------------------------------------------------------------------------------
 
-class.TargetType = 'UNKNOWN'; -- Passive, Self, AutoCast, TargetUnit, TargetPosition, TargetVector, VectorEntity
+-- The targeting type of the ability. Only one value allowed. May be used to automatically determine how an ability should be cast.
+class.TargetType = ''; -- Passive, Self, AutoCast, TargetUnit, TargetPosition, TargetVector, VectorEntity
+-- You can also provide a table with multiple values, e.g. Tundra's Piercing Shards which is both superior magic and superior physical would be { 'SuperiorMagic', 'SuperiorPhysical' }.
+class.CastEffectType = ''; -- Magic, Physical, SuperiorMagic, SuperiorPhysical 
+
+-----------------------------------------------------------------------------------------------------------------------------------------
+-- Optional properties
+-- Most of these properties may also be tables containing different values per level, e.g. abil.CanStun = { false, false, false, true }
+-----------------------------------------------------------------------------------------------------------------------------------------
 
 -- If the TargetType is VectorEntity this should specify what kind of target is optimal (e.g. for Grinex this would be a table: { 'Hero', 'Cliff', 'Tree', 'Building' }, for Rally this is 'Hero').
 class.VectorEntityTarget = nil;
