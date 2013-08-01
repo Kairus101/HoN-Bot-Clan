@@ -53,7 +53,6 @@ teambot = HoN.GetTeamBotBrain()
 					teambot.nextCheck = teambot.nextCheck + teambot.checkInterval
 					runelib.checkRunes()
 				end
-
 			end
 			teambot.runeLibOnthinkOld = teambot.onthink
 			teambot.onthink = teambot.runeLibOnthinkOverride
@@ -71,7 +70,7 @@ function runelib.checkRunes()
 			local runeFound = false
 			for _,unit in pairs(units) do
 				local typeName = unit:GetTypeName()
-				if table.contains(runeNames, typeName) then
+				if core.tableContains(runeNames, typeName) then
 					runeFound = true
 					rune.unit = unit
 					if typeName == "Powerup_Refresh" then
@@ -113,13 +112,17 @@ function runelib.GetNearestRune(pos, certain, prioritizeBetter)
 end
 
 function runelib.pickRune(botBrain, rune)
+
 	if rune == nil or rune.location == nil or rune.picked then
 		return false
 	end
 	if not HoN.CanSeePosition(rune.location) or rune.unit == nil then
 		return behaviorLib.MoveExecute(botBrain, rune.location)
 	else
-		return core.OrderTouch(botBrain, core.unitSelf, rune.unit)
+		--core.OrderTouch(botBrain, core.unitSelf, rune.unit)
+
+		botBrain:OrderEntity(core.unitSelf.object, "Touch", rune.unit)
+		return true
 	end
 end
 

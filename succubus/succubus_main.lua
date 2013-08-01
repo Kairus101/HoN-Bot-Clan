@@ -58,7 +58,7 @@ BotEcho(object:GetName()..' loading succubus_main...')
 object.heroName = 'Hero_Succubis'
 
 --   item buy order. internal names  
-behaviorLib.StartingItems  = {"Item_MarkOfTheNovice", "Item_MarkOfTheNovice", "Item_RunesOfTheBlight", "Item_MarkOfTheNovice"}
+behaviorLib.StartingItems  = {"3 Item_MarkOfTheNovice", "Item_RunesOfTheBlight"}
 behaviorLib.LaneItems  = {"Item_Bottle", "Item_EnhancedMarchers"}
 behaviorLib.MidItems  = {"Item_PortalKey", "Item_Immunity", "Item_Summon 3"}
 behaviorLib.LateItems  = {"Item_Intelligence7", "Item_GrimoireOfPower"}
@@ -158,9 +158,8 @@ function object:onthinkOverride(tGameVariables)
 			end
 		end
 	end
-
-	-- custom code here
 end
+
 object.onthinkOld = object.onthink
 object.onthink 	= object.onthinkOverride
 
@@ -178,10 +177,6 @@ function behaviorLib.RetreatFromThreatExecuteOverride(botBrain)
 	local mesmeCanActivate = skills.mesme:CanActivate()
 	local heartacheCanActivate = skills.heartache:CanActivate()
 	local bActionTaken = false
-
-	if core.NumberElements(eventsLib.incomingProjectiles["all"]) == 0 and lastRetreatUtil > 30 then
-		bottle.drink(botBrain)
-	end
 
 	if lastRetreatUtil > object.retreatCastThreshold then
 		for _,hero in pairs(core.localUnits["EnemyHeroes"]) do
@@ -397,16 +392,13 @@ behaviorLib.DontBreakChannelBehavior["Execute"] = behaviorLib.newDontBreakChanne
 ----------------------
 -- Healing behavior --
 ----------------------
-behaviorLib.healFunc = nil
 
-function behaviorLib.newUseHealthRegenUtility(botBrain)
+function behaviorLib.healHeartacheUtility(botBrain)
 	local unitSelf = core.unitSelf
 
 	if unitSelf:HasState("State_PowerupRegen") then
 		return 0
 	end
-
-	oldUtil = behaviorLib.oldUseHealthRegenUtility(botBrain)
 
 	local missingHP = unitSelf:GetMaxHealth() - unitSelf:GetHealth()
 
@@ -416,33 +408,10 @@ function behaviorLib.newUseHealthRegenUtility(botBrain)
 		heartacheUtil = core.ATanFn(missingHP, Vector3.Create(300, 25), Vector3.Create(0,0), 100)
 	end
 
-	local bottleUtil = 0
-	if core.itemBottle and core.itemBottle:CanActivate() and bottle.getCharges() ~= 0 and core.NumberElements(eventsLib.incomingProjectiles["all"]) == 0 then
-		bottleUtil = core.ATanFn(missingHP, Vector3.Create(135, 25), Vector3.Create(0,0), 100)
-		bottleUtil = bottleUtil + (core.Clamp(unitSelf:GetMaxMana() - unitSelf:GetMana(), 0, 140) - 70) * 0.2
-	end
-
-	--Bottle
-	if oldUtil > heartacheUtil and oldUtil >= bottleUtil then
-		behaviorLib.healFunc = behaviorLib.oldUseHealthRegenExecute
-	elseif heartacheUtil >= bottleUtil then
-		behaviorLib.healFunc = behaviorLib.healHeartache
-	else
-		behaviorLib.healFunc = behaviorLib.bottleHeal
-	end
-
-	local utility = max(oldUtil, heartacheUtil, bottleUtil)
-
-	if unitSelf:HasState("State_PowerupStealth") then
-		utility = utility - 30
-	end
-
-	return utility
+	return heartacheUtil
 end
-behaviorLib.oldUseHealthRegenUtility = behaviorLib.UseHealthRegenBehavior["Utility"]
-behaviorLib.UseHealthRegenBehavior["Utility"] = behaviorLib.newUseHealthRegenUtility
 
-function behaviorLib.healHeartache(botBrain)
+function behaviorLib.healHeartacheExecute(botBrain)
 	local unitSelf = core.unitSelf
 	local mypos = unitSelf:GetPosition()
 
@@ -491,46 +460,49 @@ function behaviorLib.healHeartache(botBrain)
 	return bActionTaken
 end
 
-function behaviorLib.bottleHeal(botBrain)
-	if core.itemBottle and core.itemBottle:CanActivate() then
-		bottle.drink(botBrain)
-	end
-	return false
-end
+behaviorLib.healHeartache = {}
+behaviorLib.healHeartache["Utility"] = behaviorLib.healHeartacheUtility
+behaviorLib.healHeartache["Execute"] = behaviorLib.healHeartacheExecute
+behaviorLib.healHeartache["Name"] = "healHeartache"
+tinsert(behaviorLib.tBehaviors, behaviorLib.healHeartache)
 
-function behaviorLib.newUseHealthRegenExecute(botBrain)
-	return behaviorLib.healFunc(botBrain)
-end
 
-behaviorLib.oldUseHealthRegenExecute = behaviorLib.UseHealthRegenBehavior["Execute"]
-behaviorLib.UseHealthRegenBehavior["Execute"] = behaviorLib.newUseHealthRegenExecute
+-- Change default behaviors if we have rune
 
---------------
---   Mana   --
---------------
-function behaviorLib.ManaUtility(botBrain)
-	if core.unitSelf:HasState("State_PowerupRegen") then
+function behaviorLib.newUseBottleBehavior(botBrain)
+	if core.unitSelf:HasState("State_PowerupRegen") or core.unitSelf:HasState("State_PowerupStealth") then
 		return 0
 	end
 
-	local utility = 0
-	if core.itemBottle and core.itemBottle:CanActivate() and bottle.getCharges() ~= 0 and core.NumberElements(eventsLib.incomingProjectiles["all"]) == 0 then
-		local unitSelf = core.unitSelf
-		local missingMana = unitSelf:GetMaxMana() - unitSelf:GetMana()
-		utility = core.ATanFn(missingMana, Vector3.Create(70, 20), Vector3.Create(0,-5), 100)
-	end
-
-	if core.unitSelf:HasState("State_PowerupStealth") then
-		utility = utility - 30
+	utility = behaviorLib.oldUseBottleBehavior(botBrain)
+	if bottle.getRune() == "regen" then
+		utility = utility * 0.8
 	end
 	return utility
 end
 
-behaviorLib.ManaBehavior = {}
-behaviorLib.ManaBehavior["Utility"] = behaviorLib.ManaUtility
-behaviorLib.ManaBehavior["Execute"] = behaviorLib.bottleHeal
-behaviorLib.ManaBehavior["Name"] = "Mana"
-tinsert(behaviorLib.tBehaviors, behaviorLib.ManaBehavior)
+behaviorLib.oldUseBottleBehavior = behaviorLib.UseBottleBehavior["Utility"]
+behaviorLib.UseBottleBehavior["Utility"] = behaviorLib.newUseBottleBehavior
+
+function behaviorLib.newAttackCreepsUtility(botBrain)
+	if  core.unitSelf:HasState("State_PowerupStealth") then
+		return 0
+	end
+
+	return behaviorLib.oldAttackCreepsUtility(botBrain)
+end
+behaviorLib.oldAttackCreepsUtility = behaviorLib.AttackCreepsBehavior["Utility"]
+behaviorLib.AttackCreepsBehavior["Utility"] = behaviorLib.newAttackCreepsUtility
+
+function behaviorLib.newattackEnemyMinionsUtility(botBrain)
+	if  core.unitSelf:HasState("State_PowerupStealth") then
+		return 0
+	end
+
+	return behaviorLib.oldattackEnemyMinionsUtility(botBrain)
+end
+behaviorLib.oldattackEnemyMinionsUtility = behaviorLib.attackEnemyMinionsBehavior["Utility"]
+behaviorLib.attackEnemyMinionsBehavior["Utility"] = behaviorLib.newattackEnemyMinionsUtility
 
 ---------------
 -- Pick Rune --

@@ -75,7 +75,7 @@ function bottle.getRune()
 		return ""
 	end
 	local modifier = core.itemBottle:GetActiveModifierKey()
-	local key = string.gmatch(modifier, "bottle_%w")
+	local key = string.gmatch(modifier, "bottle_%w") --damage illusion movespeed regen stealth
 	if key == "1" or key == "2" or key == "3" or key =="empty" then
 		return ""
 	else
